@@ -1,0 +1,59 @@
+package sg.edu.nus.comp.codis;
+
+import sg.edu.nus.comp.codis.ast.*;
+
+import java.util.HashMap;
+
+/**
+ * Created by Sergey Mechtaev on 7/4/2016.
+ */
+public class VariableMarshaller {
+
+    private int index;
+
+    private HashMap<String, Variable> stringToVariable;
+    private HashMap<Variable, String> variableToString;
+
+    public VariableMarshaller() {
+        this.index = 0;
+        this.stringToVariable = new HashMap<>();
+        this.variableToString = new HashMap<>();
+    }
+
+    private static String getLiteral(Variable variable) {
+        if (variable instanceof ProgramVariable) {
+            return "v";
+        } else if (variable instanceof Parameter) {
+            return "p";
+        } else if (variable instanceof Hole) {
+            return "h";
+        } else if (variable instanceof LocationVariable) {
+            return "l";
+        } else if (variable instanceof ComponentInput) {
+            return "ci";
+        } else if (variable instanceof ComponentOutput) {
+            return "co";
+        } else if (variable instanceof ComponentInstance) {
+            return "i";
+        } else {
+            return "?";
+        }
+    }
+
+    public String toString(Variable variable) {
+        if (variableToString.containsKey(variable)) {
+            return variableToString.get(variable);
+        } else {
+            index++;
+            String repr = getLiteral(variable) + index;
+            variableToString.put(variable, repr);
+            stringToVariable.put(repr, variable);
+            return repr;
+        }
+    }
+
+    public Variable toVariable(String string) {
+        return stringToVariable.get(string);
+    }
+
+}
