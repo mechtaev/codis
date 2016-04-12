@@ -39,12 +39,12 @@ public class TypeInference {
 
         private boolean typeError;
 
-        public TypeCheckVisitor() {
+        TypeCheckVisitor() {
             this.types = new Stack<>();
             this.typeError = false;
         }
 
-        private Type getType() throws TypeInferenceException {
+        Type getType() throws TypeInferenceException {
             if (types.size() != 1 || typeError) {
                 throw new TypeInferenceException();
             }

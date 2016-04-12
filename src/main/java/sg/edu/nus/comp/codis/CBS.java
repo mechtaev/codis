@@ -20,6 +20,12 @@ public class CBS implements Synthesis {
 
     private Logger logger = LoggerFactory.getLogger(CBS.class);
 
+    private Solver solver;
+
+    public CBS(Solver solver) {
+        this.solver = solver;
+    }
+
     @Override
     public Optional<Node> synthesize(ArrayList<TestCase> testSuite, ArrayList<Component> components) {
         logger.warn("FOO");

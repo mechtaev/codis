@@ -3,6 +3,7 @@ package sg.edu.nus.comp.codis;
 import sg.edu.nus.comp.codis.ast.*;
 
 import java.util.HashMap;
+import java.util.Set;
 
 /**
  * Created by Sergey Mechtaev on 7/4/2016.
@@ -54,6 +55,10 @@ public class VariableMarshaller {
 
     public Variable toVariable(String string) {
         return stringToVariable.get(string);
+    }
+
+    public Set<Variable> getVariables() {
+        return variableToString.keySet();
     }
 
 }

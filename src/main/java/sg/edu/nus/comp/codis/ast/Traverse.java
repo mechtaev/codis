@@ -39,12 +39,12 @@ public class Traverse {
         private Stack<Node> nodes;
         private Function<Node, Node> function;
 
-        public TransformationVisitor(Function<Node, Node> function) {
+        TransformationVisitor(Function<Node, Node> function) {
             this.function = function;
             nodes = new Stack<>();
         }
 
-        public Node getTransformedNode() {
+        Node getTransformedNode() {
             assert nodes.size() != 0;
             return nodes.peek();
         }
