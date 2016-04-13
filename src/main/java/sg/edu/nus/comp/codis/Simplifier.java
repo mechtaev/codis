@@ -123,6 +123,9 @@ public class Simplifier {
         simplificationRules.add(new RewriteRule(new And(boolHole, new Not(boolHole)),
                 RewriteRule.transformInto(BoolConst.FALSE)));
 
+        simplificationRules.add(new RewriteRule(new And(boolHole, boolHole),
+                RewriteRule.transformInto(boolHole)));
+
         simplificationRules.add(new RewriteRule(new Or(boolHole, BoolConst.FALSE),
                 RewriteRule.transformInto(boolHole)));
 
@@ -140,6 +143,9 @@ public class Simplifier {
 
         simplificationRules.add(new RewriteRule(new Or(boolHole, new Not(boolHole)),
                 RewriteRule.transformInto(BoolConst.TRUE)));
+
+        simplificationRules.add(new RewriteRule(new Or(boolHole, boolHole),
+                RewriteRule.transformInto(boolHole)));
 
         simplificationRules.add(new RewriteRule(new Impl(BoolConst.TRUE, boolHole),
                 RewriteRule.transformInto(boolHole)));

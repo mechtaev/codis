@@ -222,7 +222,15 @@ public class CBS implements Synthesis {
     private Node decode(Map<Variable, Constant> assignment, Component result) {
         Hole resultHole = new ArrayList<>(result.getInputs()).get(0);
         Location root = new Location(new ComponentInput(result, resultHole));
-        return buildFromRoot(assignment, root);
+        Node node = buildFromRoot(assignment, root);
+        Map<Parameter, Constant> parameterValuation = new HashMap<>();
+        for (Variable variable : assignment.keySet()) {
+            if (variable instanceof Parameter) {
+                parameterValuation.put((Parameter)variable, assignment.get(variable));
+            }
+        }
+        return Traverse.substitute(node, parameterValuation);
+
     }
 
     private Node buildFromRoot(Map<Variable, Constant> assignment, Location root) {
