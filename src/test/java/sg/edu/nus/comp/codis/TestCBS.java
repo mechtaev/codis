@@ -112,8 +112,8 @@ public class TestCBS {
         testSuite.add(new TestCase(assignment2, BoolConst.FALSE));
 
         Map<ProgramVariable, Node> assignment3 = new HashMap<>();
-        assignment2.put(x, IntConst.of(1));
-        assignment2.put(y, IntConst.of(1));
+        assignment3.put(x, IntConst.of(1));
+        assignment3.put(y, IntConst.of(1));
         testSuite.add(new TestCase(assignment3, BoolConst.FALSE));
 
         Optional<Node> node = synthesizer.synthesize(testSuite, componentMultiset);
