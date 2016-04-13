@@ -28,13 +28,13 @@ public class VariableMarshaller {
             return "p";
         } else if (variable instanceof Hole) {
             return "h";
-        } else if (variable instanceof LocationVariable) {
+        } else if (variable instanceof Location) {
             return "l";
         } else if (variable instanceof ComponentInput) {
             return "ci";
         } else if (variable instanceof ComponentOutput) {
             return "co";
-        } else if (variable instanceof ComponentInstance) {
+        } else if (variable instanceof TestInstance) {
             return "i";
         } else {
             return "?";

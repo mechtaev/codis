@@ -1,7 +1,6 @@
 package sg.edu.nus.comp.codis;
 
 import com.microsoft.z3.*;
-import fj.P;
 import fj.data.Either;
 import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.*;
@@ -123,8 +122,8 @@ public class Z3 implements Solver {
         }
 
         @Override
-        public void visit(LocationVariable locationVariable) {
-            processVariable(locationVariable);
+        public void visit(Location location) {
+            processVariable(location);
         }
 
         @Override
@@ -135,8 +134,8 @@ public class Z3 implements Solver {
 
         @Override
         public void visit(Equal equal) {
-            ArithExpr right = (ArithExpr) exprs.pop();
-            ArithExpr left = (ArithExpr) exprs.pop();
+            Expr right = exprs.pop();
+            Expr left = exprs.pop();
             exprs.push(ctx.mkEq(left, right));
         }
 
@@ -255,9 +254,8 @@ public class Z3 implements Solver {
         }
 
         @Override
-        public void visit(ComponentInstance componentInstance) {
-            exprs.pop(); //don't need separate i/o variable
-            processVariable(componentInstance);
+        public void visit(TestInstance testInstance) {
+            processVariable(testInstance);
         }
 
         @Override
@@ -269,6 +267,7 @@ public class Z3 implements Solver {
         public void visit(Hole hole) {
             processVariable(hole);
         }
+
     }
 
 }

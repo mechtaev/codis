@@ -5,10 +5,7 @@ import org.slf4j.LoggerFactory;
 import sg.edu.nus.comp.codis.ast.Component;
 import sg.edu.nus.comp.codis.ast.Node;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by Sergey Mechtaev on 7/4/2016.
@@ -24,7 +21,7 @@ public class CEGIS implements Synthesis {
     }
 
     @Override
-    public Optional<Node> synthesize(ArrayList<TestCase> testSuite, ArrayList<Component> components) {
+    public Optional<Node> synthesize(ArrayList<TestCase> testSuite, Map<Node, Integer> componentMultiset) {
         assert testSuite.size() > 0;
 
         Set<TestCase> remaining = new HashSet<>(testSuite);
@@ -41,7 +38,7 @@ public class CEGIS implements Synthesis {
             remaining.remove(counterExample.get());
             counterExample = Optional.empty();
 
-            node = synthesizer.synthesize(new ArrayList<>(current), components);
+            node = synthesizer.synthesize(new ArrayList<>(current), componentMultiset);
 
             if (!node.isPresent()) {
                 logger.info("Failed");

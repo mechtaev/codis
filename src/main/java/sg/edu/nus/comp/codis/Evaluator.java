@@ -9,7 +9,7 @@ import java.util.Map;
  */
 public class Evaluator {
 
-    public static Node eval(Node node, Map<ProgramVariable, Constant> assignment) {
+    public static Node eval(Node node, Map<ProgramVariable, Node> assignment) {
         return Simplifier.symplify(Traverse.substitute(node, assignment));
     }
 

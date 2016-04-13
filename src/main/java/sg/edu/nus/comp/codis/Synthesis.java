@@ -4,6 +4,7 @@ import sg.edu.nus.comp.codis.ast.Component;
 import sg.edu.nus.comp.codis.ast.Node;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -11,6 +12,6 @@ import java.util.Optional;
  */
 public interface Synthesis {
 
-    Optional<Node> synthesize(ArrayList<TestCase> testSuite, ArrayList<Component> components);
+    Optional<Node> synthesize(ArrayList<TestCase> testSuite, Map<Node, Integer> componentMultiset);
 
 }

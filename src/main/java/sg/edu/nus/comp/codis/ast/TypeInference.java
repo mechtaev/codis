@@ -58,7 +58,7 @@ public class TypeInference {
         }
 
         @Override
-        public void visit(LocationVariable locationVariable) {
+        public void visit(Location location) {
             if (typeError) return;
             types.push(IntType.TYPE);
         }
@@ -258,10 +258,9 @@ public class TypeInference {
         }
 
         @Override
-        public void visit(ComponentInstance componentInstance) {
+        public void visit(TestInstance testInstance) {
             if (typeError) return;
-            if (types.size() < 1)
-                typeError = true;
+            types.push(typeOf(testInstance.getVariable()));
         }
 
         @Override
@@ -275,6 +274,7 @@ public class TypeInference {
             if (typeError) return;
             types.push(hole.getType());
         }
+
     }
 
 }

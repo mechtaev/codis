@@ -103,9 +103,9 @@ public class Unifier {
         }
 
         @Override
-        public void visit(LocationVariable locationVariable) {
+        public void visit(Location location) {
             if (failed) return;
-            processLeaf(locationVariable);
+            processLeaf(location);
         }
 
         @Override
@@ -246,21 +246,9 @@ public class Unifier {
         }
 
         @Override
-        public void visit(ComponentInstance componentInstance) {
+        public void visit(TestInstance testInstance) {
             if (failed) return;
-            if (nodeStack.isEmpty()) {
-                failed = true;
-                return;
-            }
-            Node right = nodeStack.pop();
-            if (right instanceof ComponentInstance) {
-                nodeStack.push(((ComponentInstance)right).getVariable());
-                return;
-            }
-            if (right instanceof Hole) {
-                throw new UnsupportedOperationException("Right holes are not supported");
-            }
-            failed = true;
+            processLeaf(testInstance);
         }
 
         @Override
@@ -288,6 +276,7 @@ public class Unifier {
             failed = true;
 
         }
+
     }
 
 

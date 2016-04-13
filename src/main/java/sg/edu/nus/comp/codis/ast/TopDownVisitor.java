@@ -8,7 +8,7 @@ import sg.edu.nus.comp.codis.ast.theory.*;
 public interface TopDownVisitor {
     void visit(ProgramVariable programVariable);
 
-    void visit(LocationVariable locationVariable);
+    void visit(Location location);
 
     void visit(UIFApplication UIFApplication);
 
@@ -50,7 +50,7 @@ public interface TopDownVisitor {
 
     void visit(ComponentOutput componentOutput);
 
-    void visit(ComponentInstance componentInstance);
+    void visit(TestInstance testInstance);
 
     void visit(Parameter parameter);
 

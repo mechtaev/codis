@@ -9,7 +9,7 @@ import sg.edu.nus.comp.codis.ast.theory.IntConst;
 public interface BottomUpVisitor {
     void visit(ProgramVariable programVariable);
 
-    void visit(LocationVariable locationVariable);
+    void visit(Location location);
 
     void visit(UIFApplication UIFApplication);
 
@@ -51,7 +51,7 @@ public interface BottomUpVisitor {
 
     void visit(ComponentOutput componentOutput);
 
-    void visit(ComponentInstance componentInstance);
+    void visit(TestInstance testInstance);
 
     void visit(Parameter parameter);
 

@@ -2,10 +2,7 @@ package sg.edu.nus.comp.codis.ast;
 
 import sg.edu.nus.comp.codis.ast.theory.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Stack;
+import java.util.*;
 import java.util.function.Function;
 
 /**
@@ -30,8 +27,156 @@ public class Traverse {
         });
     }
 
-    public static <T> ArrayList<T> collectByType(Node node, Class<T> type) {
-        throw new UnsupportedOperationException();
+    public static <T> Set<T> collectByType(Node node, Class<T> type) {
+        CollectVisitor visitor = new CollectVisitor(type);
+        node.accept(visitor);
+        return visitor.getCollected();
+    }
+
+    private static class CollectVisitor<T> implements BottomUpVisitor {
+
+        public Set<T> getCollected() {
+            return collected;
+        }
+
+        private Set<T> collected;
+        private Class<T> type;
+
+        public CollectVisitor(Class<T> type) {
+            this.type = type;
+            collected = new HashSet<>();
+        }
+
+        private void addIfMatches(Node node) {
+            if (type.isInstance(node)) {
+                collected.add((T) node);
+            }
+        }
+
+        @Override
+        public void visit(ProgramVariable programVariable) {
+            addIfMatches(programVariable);
+        }
+
+        @Override
+        public void visit(Location location) {
+            addIfMatches(location);
+        }
+
+        @Override
+        public void visit(UIFApplication UIFApplication) {
+            addIfMatches(UIFApplication);
+        }
+
+        @Override
+        public void visit(Equal equal) {
+            addIfMatches(equal);
+        }
+
+        @Override
+        public void visit(Add add) {
+            addIfMatches(add);
+        }
+
+        @Override
+        public void visit(Sub sub) {
+            addIfMatches(sub);
+        }
+
+        @Override
+        public void visit(Mult mult) {
+            addIfMatches(mult);
+        }
+
+        @Override
+        public void visit(Div div) {
+            addIfMatches(div);
+        }
+
+        @Override
+        public void visit(And and) {
+            addIfMatches(and);
+        }
+
+        @Override
+        public void visit(Or or) {
+            addIfMatches(or);
+        }
+
+        @Override
+        public void visit(Iff iff) {
+            addIfMatches(iff);
+        }
+
+        @Override
+        public void visit(Impl impl) {
+            addIfMatches(impl);
+        }
+
+        @Override
+        public void visit(Greater greater) {
+            addIfMatches(greater);
+        }
+
+        @Override
+        public void visit(Less less) {
+            addIfMatches(less);
+        }
+
+        @Override
+        public void visit(GreaterOrEqual greaterOrEqual) {
+            addIfMatches(greaterOrEqual);
+        }
+
+        @Override
+        public void visit(LessOrEqual lessOrEqual) {
+            addIfMatches(lessOrEqual);
+        }
+
+        @Override
+        public void visit(Minus minus) {
+            addIfMatches(minus);
+        }
+
+        @Override
+        public void visit(Not not) {
+            addIfMatches(not);
+        }
+
+        @Override
+        public void visit(IntConst intConst) {
+            addIfMatches(intConst);
+        }
+
+        @Override
+        public void visit(BoolConst boolConst) {
+            addIfMatches(boolConst);
+        }
+
+        @Override
+        public void visit(ComponentInput componentInput) {
+            addIfMatches(componentInput);
+        }
+
+        @Override
+        public void visit(ComponentOutput componentOutput) {
+            addIfMatches(componentOutput);
+        }
+
+        @Override
+        public void visit(TestInstance testInstance) {
+            addIfMatches(testInstance);
+        }
+
+        @Override
+        public void visit(Parameter parameter) {
+            addIfMatches(parameter);
+        }
+
+        @Override
+        public void visit(Hole hole) {
+            addIfMatches(hole);
+        }
     }
 
     private static class TransformationVisitor implements BottomUpVisitor {
@@ -55,8 +200,8 @@ public class Traverse {
         }
 
         @Override
-        public void visit(LocationVariable locationVariable) {
-            nodes.push(function.apply(locationVariable));
+        public void visit(Location location) {
+            nodes.push(function.apply(location));
         }
 
         @Override
@@ -194,10 +339,8 @@ public class Traverse {
         }
 
         @Override
-        public void visit(ComponentInstance componentInstance) {
-            Node arg = nodes.pop();
-            assert arg instanceof Variable;
-            nodes.push(function.apply(new ComponentInstance(((Variable)arg), componentInstance.getTest())));
+        public void visit(TestInstance testInstance) {
+            nodes.push(function.apply(testInstance));
         }
 
         @Override
@@ -209,5 +352,6 @@ public class Traverse {
         public void visit(Hole hole) {
             nodes.push(function.apply(hole));
         }
+
     }
 }

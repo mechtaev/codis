@@ -4,6 +4,7 @@ import sg.edu.nus.comp.codis.ast.Component;
 import sg.edu.nus.comp.codis.ast.Node;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -12,7 +13,7 @@ import java.util.Optional;
 public class CODIS implements Synthesis {
 
     @Override
-    public Optional<Node> synthesize(ArrayList<TestCase> testSuite, ArrayList<Component> components) {
+    public Optional<Node> synthesize(ArrayList<TestCase> testSuite, Map<Node, Integer> componentMultiset) {
         throw new UnsupportedOperationException();
     }
 

@@ -4,11 +4,11 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.util.ArrayList;
+import java.util.Set;
 
 /**
  * Created by Sergey Mechtaev on 7/4/2016.
  *
- * Components implement physical equality because we need multisets
  */
 public class Component {
 
@@ -21,6 +21,10 @@ public class Component {
 
     public Node getSemantics() {
         return semantics;
+    }
+
+    public Set<Hole> getInputs() {
+        return Traverse.collectByType(this.semantics, Hole.class);
     }
 
     @Override
