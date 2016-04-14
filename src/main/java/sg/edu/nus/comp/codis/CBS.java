@@ -169,6 +169,9 @@ public class CBS implements Synthesis {
         inputs.get(resultHole.getType()).add(new ComponentInput(result, resultHole));
         ArrayList<Node> clauses = new ArrayList<>();
         for (Type type : outputs.keySet()) {
+            if (!inputs.containsKey(type) || !outputs.containsKey(type)) {
+                continue;
+            }
             for (ComponentOutput co: outputs.get(type)) {
                 for (ComponentInput ci : inputs.get(type)) {
                     clauses.add(new Impl(new Equal(new Location(ci), new Location(co)), new Equal(ci, co)));
