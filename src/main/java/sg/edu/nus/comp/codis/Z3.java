@@ -13,15 +13,24 @@ import java.util.*;
  */
 public class Z3 implements Solver {
 
+    private static final Z3 INSTANCE = new Z3();
+
     private Context ctx;
     private com.microsoft.z3.Solver solver;
 
-    public Z3() {
+    private Z3() {
+        if (INSTANCE != null) {
+            throw new IllegalStateException("Already instantiated");
+        }
         HashMap<String, String> cfg = new HashMap<>();
         cfg.put("model", "true");
         cfg.put("unsat_core", "true");
         this.ctx = new Context(cfg);
         this.solver = ctx.mkSolver();
+    }
+
+    public static Z3 getInstance() {
+        return INSTANCE;
     }
 
     public void dispose() {
@@ -44,7 +53,9 @@ public class Z3 implements Solver {
             assumption.accept(visitor);
             assumptionExprs.add(visitor.getExpr());
         }
-        Status status = solver.check(assumptionExprs.toArray(new Expr[assumptionExprs.size()]));
+        Expr[] assumptionArray = assumptionExprs.toArray(new Expr[assumptionExprs.size() + 1]);
+        assumptionArray[assumptionArray.length - 1] = ctx.mkBoolConst("fix");
+        Status status = solver.check();
         if (status.equals(Status.SATISFIABLE)) {
             Model model = solver.getModel();
             return Either.left(getAssignment(model, marshaller));

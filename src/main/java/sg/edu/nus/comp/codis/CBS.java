@@ -36,13 +36,13 @@ public class CBS implements Synthesis {
         ArrayList<Node> clauses = encode(testSuite, components, result);
         Optional<Map<Variable, Constant>> assignment = solver.getModel(clauses);
         if (assignment.isPresent()) {
-            return Optional.of(decode(assignment.get(), result));
+            return Optional.of(decode(assignment.get(), components, result));
         } else {
             return Optional.empty();
         }
     }
 
-    private ArrayList<Component> flattenComponentMultiset(Map<Node, Integer> componentMultiset) {
+    public static ArrayList<Component> flattenComponentMultiset(Map<Node, Integer> componentMultiset) {
         ArrayList<Component> components = new ArrayList<>();
         for (Node node : componentMultiset.keySet()) {
             IntStream.range(0, componentMultiset.get(node)).forEach(i -> components.add(new Component(node)));
@@ -196,12 +196,12 @@ public class CBS implements Synthesis {
         clauses.add(new Equal(new TestInstance(new ComponentOutput(result), testCase), testCase.getOutput()));
         for (ProgramVariable variable : testCase.getAssignment().keySet()) {
             Node value = instantiate(testCase.getAssignment().get(variable), testCase);
-            clauses.add(new Equal(new TestInstance(variable, testCase), value));
+            clauses.add(new Equal(new TestInstance(variable, testCase), instantiate(value, testCase)));
         }
         return clauses;
     }
 
-    private ArrayList<Node> encode(ArrayList<TestCase> testSuite, ArrayList<Component> components, Component result) {
+    public static ArrayList<Node> encode(ArrayList<TestCase> testSuite, ArrayList<Component> components, Component result) {
         ArrayList<Node> wfp = wellFormedness(components, result);
         ArrayList<Node> lib = library(components, result);
         ArrayList<Node> connections = connection(components, result);
@@ -219,21 +219,24 @@ public class CBS implements Synthesis {
         return clauses;
     }
 
-    private Node decode(Map<Variable, Constant> assignment, Component result) {
+    public static Node decode(Map<Variable, Constant> assignment, ArrayList<Component> components, Component result) {
         Hole resultHole = new ArrayList<>(result.getInputs()).get(0);
         Location root = new Location(new ComponentInput(result, resultHole));
-        Node node = buildFromRoot(assignment, root);
+        Node node = buildFromRoot(assignment, components, root);
+        return substituteParameters(assignment, node);
+    }
+
+    public static Node substituteParameters(Map<Variable, Constant> assignment, Node node) {
         Map<Parameter, Constant> parameterValuation = new HashMap<>();
         for (Variable variable : assignment.keySet()) {
             if (variable instanceof Parameter) {
-                parameterValuation.put((Parameter)variable, assignment.get(variable));
+                parameterValuation.put((Parameter) variable, assignment.get(variable));
             }
         }
         return Traverse.substitute(node, parameterValuation);
-
     }
 
-    private Node buildFromRoot(Map<Variable, Constant> assignment, Location root) {
+    private static Node buildFromRoot(Map<Variable, Constant> assignment, ArrayList<Component> components, Location root) {
         if (!assignment.containsKey(root)) {
             throw new RuntimeException("undefined location");
         }
@@ -242,7 +245,9 @@ public class CBS implements Synthesis {
         for (Map.Entry<Variable, Constant> entry : assignment.entrySet()) {
             if (entry.getKey() instanceof Location) {
                 Variable variable = ((Location)entry.getKey()).getVariable();
-                if (variable instanceof ComponentOutput && entry.getValue().equals(location)) {
+                if (variable instanceof ComponentOutput &&
+                        components.contains(((ComponentOutput)variable).getComponent()) &&
+                        entry.getValue().equals(location)) {
                     reference = Optional.of(variable);
                     break;
                 }
@@ -253,7 +258,7 @@ public class CBS implements Synthesis {
         }
         Component rootComponent = ((ComponentOutput)reference.get()).getComponent();
         Map<Variable, Node> mapping = rootComponent.getInputs().stream().collect(Collectors.toMap(Function.identity(),
-                hole -> buildFromRoot(assignment, new Location(new ComponentInput(rootComponent, hole)))));
+                hole -> buildFromRoot(assignment, components, new Location(new ComponentInput(rootComponent, hole)))));
         return Traverse.substitute(rootComponent.getSemantics(), mapping);
     }
 }

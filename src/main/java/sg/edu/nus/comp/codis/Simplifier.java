@@ -36,27 +36,27 @@ public class Simplifier {
         Function<Map<Hole, Node>, Boolean> getB = unifier -> ((BoolConst)unifier.get(b)).getValue();
 
         // Evaluation rules:
-        simplificationRules.add(new RewriteRule(new Add(i ,j), (unused, unifier) ->
+        simplificationRules.add(new RewriteRule(new Add(i, j), (unused, unifier) ->
                 IntConst.of(getI.apply(unifier) + getJ.apply(unifier))));
 
-        simplificationRules.add(new RewriteRule(new Sub(i ,j), (unused, unifier) ->
+        simplificationRules.add(new RewriteRule(new Sub(i, j), (unused, unifier) ->
                 IntConst.of(getI.apply(unifier) - getJ.apply(unifier))));
-        simplificationRules.add(new RewriteRule(new Mult(i ,j), (unused, unifier) ->
+        simplificationRules.add(new RewriteRule(new Mult(i, j), (unused, unifier) ->
                 IntConst.of(getI.apply(unifier) * getJ.apply(unifier))));
 
-        simplificationRules.add(new RewriteRule(new Div(i ,j), (unused, unifier) ->
+        simplificationRules.add(new RewriteRule(new Div(i, j), (unused, unifier) ->
                 IntConst.of(getI.apply(unifier) / getJ.apply(unifier))));
 
-        simplificationRules.add(new RewriteRule(new Greater(i ,j), (unused, unifier) ->
+        simplificationRules.add(new RewriteRule(new Greater(i, j), (unused, unifier) ->
                 BoolConst.of(getI.apply(unifier) > getJ.apply(unifier))));
 
-        simplificationRules.add(new RewriteRule(new GreaterOrEqual(i ,j), (unused, unifier) ->
+        simplificationRules.add(new RewriteRule(new GreaterOrEqual(i, j), (unused, unifier) ->
                 BoolConst.of(getI.apply(unifier) >= getJ.apply(unifier))));
 
-        simplificationRules.add(new RewriteRule(new Less(i ,j), (unused, unifier) ->
+        simplificationRules.add(new RewriteRule(new Less(i, j), (unused, unifier) ->
                 BoolConst.of(getI.apply(unifier) < getJ.apply(unifier))));
 
-        simplificationRules.add(new RewriteRule(new LessOrEqual(i ,j), (unused, unifier) ->
+        simplificationRules.add(new RewriteRule(new LessOrEqual(i, j), (unused, unifier) ->
                 BoolConst.of(getI.apply(unifier) <= getJ.apply(unifier))));
 
         simplificationRules.add(new RewriteRule(new Minus(i), (unused, unifier) ->

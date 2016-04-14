@@ -23,6 +23,14 @@ public class ProgramVariable extends Variable {
         this.type = type;
     }
 
+    public static ProgramVariable mkInt(String name) {
+        return new ProgramVariable(name, IntType.TYPE);
+    }
+
+    public static ProgramVariable mkBool(String name) {
+        return new ProgramVariable(name, BoolType.TYPE);
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (!(obj instanceof ProgramVariable))

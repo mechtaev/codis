@@ -15,7 +15,7 @@ public class TestSimplifier {
 
     @Test
     public void testNoSimplification() {
-        Node n = new Add(new ProgramVariable("x", IntType.TYPE), IntConst.of(2));
+        Node n = new Add(ProgramVariable.mkInt("x"), IntConst.of(2));
         Node s = Simplifier.symplify(n);
         assertEquals(n, s);
     }
@@ -29,20 +29,20 @@ public class TestSimplifier {
 
     @Test
     public void testArithmetic() {
-        Node n = new Add(new Parameter("p", IntType.TYPE),
-                         new Sub(new Mult(IntConst.of(1),
-                                 new Parameter("a", IntType.TYPE)), new Parameter("a", IntType.TYPE)));
+        Parameter a = Parameter.mkInt("a");
+        Parameter p = Parameter.mkInt("p");
+        Node n = new Add(p, new Sub(new Mult(IntConst.of(1), a), a));
         Node s = Simplifier.symplify(n);
-        assertEquals(new Parameter("p", IntType.TYPE), s);
+        assertEquals(p, s);
     }
 
     @Test
     public void testLogic() {
-        Node n = new Or(new Parameter("p", BoolType.TYPE),
-                new Impl(BoolConst.TRUE,
-                         new And(new Parameter("a", BoolType.TYPE), new Not(new Parameter("a", BoolType.TYPE)))));
+        Parameter a = Parameter.mkBool("a");
+        Parameter p = Parameter.mkBool("p");
+        Node n = new Or(p, new Impl(BoolConst.TRUE, new And(a, new Not(a))));
         Node s = Simplifier.symplify(n);
-        assertEquals(new Parameter("p", BoolType.TYPE), s);
+        assertEquals(p, s);
     }
 
 }

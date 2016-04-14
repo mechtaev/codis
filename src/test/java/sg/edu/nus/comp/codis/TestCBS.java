@@ -1,10 +1,6 @@
 package sg.edu.nus.comp.codis;
 
-import fj.test.Bool;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.*;
 
@@ -21,30 +17,19 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestCBS {
 
-    private static Z3 z3;
     private static Synthesis synthesizer;
-
-    private static Hole i = new Hole("i", IntType.TYPE, Node.class);
-    private static Hole j = new Hole("j", IntType.TYPE, Node.class);
-    private static Hole a = new Hole("a", BoolType.TYPE, Node.class);
-    private static Hole b = new Hole("b", BoolType.TYPE, Node.class);
 
     @BeforeClass
     public static void initSolver() {
-        z3 = new Z3();
-        synthesizer = new CBS(z3);
+        synthesizer = new CBS(Z3.getInstance());
     }
 
-    @AfterClass
-    public static void disposeSolver() {
-        z3.dispose();
-    }
+    private final ProgramVariable x = ProgramVariable.mkInt("x");
+    private final ProgramVariable y = ProgramVariable.mkInt("y");
 
     @Test
     public void testVariableChoice() {
         Map<Node, Integer> componentMultiset = new HashMap<>();
-        ProgramVariable x = new ProgramVariable("x", IntType.TYPE);
-        ProgramVariable y = new ProgramVariable("y", IntType.TYPE);
         componentMultiset.put(x, 1);
         componentMultiset.put(y, 1);
 
@@ -67,12 +52,10 @@ public class TestCBS {
     @Test
     public void testArithmetic() {
         Map<Node, Integer> componentMultiset = new HashMap<>();
-        ProgramVariable x = new ProgramVariable("x", IntType.TYPE);
-        ProgramVariable y = new ProgramVariable("y", IntType.TYPE);
         componentMultiset.put(x, 1);
         componentMultiset.put(y, 1);
-        componentMultiset.put(new Add(i, j), 1);
-        componentMultiset.put(new Sub(i, j), 1);
+        componentMultiset.put(Components.ADD, 1);
+        componentMultiset.put(Components.SUB, 1);
 
         ArrayList<TestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
@@ -93,12 +76,10 @@ public class TestCBS {
     @Test
     public void testArithmeticAndLogic() {
         Map<Node, Integer> componentMultiset = new HashMap<>();
-        ProgramVariable x = new ProgramVariable("x", IntType.TYPE);
-        ProgramVariable y = new ProgramVariable("y", IntType.TYPE);
         componentMultiset.put(x, 1);
         componentMultiset.put(y, 1);
-        componentMultiset.put(new Greater(i, j), 1);
-        componentMultiset.put(new GreaterOrEqual(i, j), 1);
+        componentMultiset.put(Components.GT, 1);
+        componentMultiset.put(Components.GE, 1);
 
         ArrayList<TestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();

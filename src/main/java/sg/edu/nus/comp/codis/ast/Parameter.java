@@ -23,6 +23,15 @@ public class Parameter extends Variable {
         this.type = type;
     }
 
+    public static Parameter mkInt(String name) {
+        return new Parameter(name, IntType.TYPE);
+    }
+
+    public static Parameter mkBool(String name) {
+        return new Parameter(name, BoolType.TYPE);
+    }
+
+
     @Override
     public boolean equals(Object obj) {
         if (!(obj instanceof Parameter))

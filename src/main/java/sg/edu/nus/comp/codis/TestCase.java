@@ -13,20 +13,20 @@ import java.util.Map;
  */
 public class TestCase {
 
-    private Map<ProgramVariable, Node> assignment;
+    private Map<ProgramVariable, ? extends Node> assignment;
 
-    private Constant output;
+    private Node output;
 
-    public TestCase(Map<ProgramVariable, Node> assignment, Constant output) {
+    public TestCase(Map<ProgramVariable, ? extends Node> assignment, Node output) {
         this.assignment = assignment;
         this.output = output;
     }
 
-    public Map<ProgramVariable, Node> getAssignment() {
+    public Map<ProgramVariable, ? extends Node> getAssignment() {
         return assignment;
     }
 
-    public Constant getOutput() {
+    public Node getOutput() {
         return output;
     }
 
