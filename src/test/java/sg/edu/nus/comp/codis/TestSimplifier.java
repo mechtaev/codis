@@ -44,4 +44,14 @@ public class TestSimplifier {
         assertEquals(p, s);
     }
 
+    @Test
+    public void testMinusElimination() {
+        Parameter a = Parameter.mkInt("a");
+        Parameter b = Parameter.mkInt("b");
+        Node n = new Minus(new Add(new Minus(a), b));
+        Node s = Simplifier.simplify(n);
+        assertEquals(new Sub(a, b), s);
+    }
+
+
 }
