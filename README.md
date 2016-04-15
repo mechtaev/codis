@@ -7,7 +7,7 @@ CODIS is an inductive program synthesizer.
 1. Compile Z3 with Java support.
 2. Install `com.microsoft.z3` to Maven:
 
-        mvn install:install-file -Dfile=/path/to/com.microsift.z3.jar \
+        mvn install:install-file -Dfile=/path/to/com.microsoft.z3.jar \
                                  -DgroupId=com.microsoft.z3 \
                                  -DartifactId=z3 \
                                  -Dversion=4 \
