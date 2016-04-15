@@ -27,8 +27,6 @@
             <groupId>com.microsoft.z3</groupId>
             <artifactId>z3</artifactId>
             <version>4</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/com.microsoft.z3.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
