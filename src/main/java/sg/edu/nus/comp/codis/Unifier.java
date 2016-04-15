@@ -277,6 +277,25 @@ public class Unifier {
 
         }
 
+        @Override
+        public void visit(ITE ite) {
+            if (nodeStack.isEmpty()) {
+                failed = true;
+                return;
+            }
+            Node right = nodeStack.pop();
+            if (right instanceof ITE) {
+                nodeStack.push(((ITE)right).getElseBranch());
+                nodeStack.push(((ITE)right).getThenBranch());
+                nodeStack.push(((ITE)right).getCondition());
+                return;
+            }
+            if (right instanceof Hole) {
+                throw new UnsupportedOperationException("Right holes are not supported");
+            }
+            failed = true;
+        }
+
     }
 
 

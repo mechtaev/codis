@@ -55,4 +55,6 @@ public interface TopDownVisitor {
     void visit(Parameter parameter);
 
     void visit(Hole hole);
+
+    void visit(ITE ite);
 }

@@ -84,7 +84,7 @@ public class TypeInference {
         @Override
         public void visit(Equal equal) {
             if (typeError) return;
-            if (types.size() < 2 || !types.pop().equals(IntType.TYPE) || !types.pop().equals(IntType.TYPE)) {
+            if (types.size() < 2 || !(types.pop().equals(types.pop()))) { // polymorphic equality
                 typeError = true;
                 return;
             }
@@ -273,6 +273,19 @@ public class TypeInference {
         public void visit(Hole hole) {
             if (typeError) return;
             types.push(hole.getType());
+        }
+
+        @Override
+        public void visit(ITE ite) {
+            if (typeError) return;
+            if (types.size() < 3 ||
+                    !types.pop().equals(IntType.TYPE) ||
+                    !types.pop().equals(IntType.TYPE) ||
+                    !types.pop().equals(BoolType.TYPE)) {
+                typeError = true;
+                return;
+            }
+            types.push(IntType.TYPE);
         }
 
     }

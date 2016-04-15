@@ -102,5 +102,36 @@ public class TestCBS {
         assertEquals(node.get(), new Greater(x, y));
     }
 
+    @Test
+    public void testITE() {
+        Map<Node, Integer> componentMultiset = new HashMap<>();
+        componentMultiset.put(x, 1);
+        componentMultiset.put(y, 1);
+        componentMultiset.put(IntConst.of(0), 1);
+        componentMultiset.put(IntConst.of(1), 1);
+        componentMultiset.put(Components.GT, 1);
+        componentMultiset.put(Components.ITE, 1);
+
+        ArrayList<TestCase> testSuite = new ArrayList<>();
+        Map<ProgramVariable, Node> assignment1 = new HashMap<>();
+        assignment1.put(x, IntConst.of(3));
+        assignment1.put(y, IntConst.of(2));
+        testSuite.add(new TestCase(assignment1, IntConst.of(1)));
+
+        Map<ProgramVariable, Node> assignment2 = new HashMap<>();
+        assignment2.put(x, IntConst.of(2));
+        assignment2.put(y, IntConst.of(3));
+        testSuite.add(new TestCase(assignment2, IntConst.of(0)));
+
+        Map<ProgramVariable, Node> assignment3 = new HashMap<>();
+        assignment3.put(x, IntConst.of(1));
+        assignment3.put(y, IntConst.of(1));
+        testSuite.add(new TestCase(assignment3, IntConst.of(0)));
+
+        Optional<Node> node = synthesizer.synthesize(testSuite, componentMultiset);
+        assertTrue(node.isPresent());
+        assertEquals(node.get(), new ITE(new Greater(x, y), IntConst.of(1), IntConst.of(0)));
+    }
+
 
 }

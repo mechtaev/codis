@@ -31,4 +31,6 @@ public class Components {
     public static final Node IFF = new Iff(a, b);
     public static final Node NOT = new Not(a);
 
+    public static final Node ITE = new ITE(a, i, j);
+
 }

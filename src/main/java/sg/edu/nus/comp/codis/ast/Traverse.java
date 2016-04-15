@@ -177,6 +177,11 @@ public class Traverse {
         public void visit(Hole hole) {
             addIfMatches(hole);
         }
+
+        @Override
+        public void visit(ITE ite) {
+            addIfMatches(ite);
+        }
     }
 
     private static class TransformationVisitor implements BottomUpVisitor {
@@ -351,6 +356,14 @@ public class Traverse {
         @Override
         public void visit(Hole hole) {
             nodes.push(function.apply(hole));
+        }
+
+        @Override
+        public void visit(ITE ite) {
+            Node elseBranch = nodes.pop();
+            Node thenBranch = nodes.pop();
+            Node condition = nodes.pop();
+            nodes.push(function.apply(new ITE(condition, thenBranch, elseBranch)));
         }
 
     }
