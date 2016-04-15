@@ -1,7 +1,6 @@
 package sg.edu.nus.comp.codis;
 
 import com.microsoft.z3.*;
-import fj.data.Array;
 import fj.data.Either;
 import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.*;
