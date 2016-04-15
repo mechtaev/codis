@@ -15,7 +15,7 @@ import java.util.function.Function;
  */
 public class Simplifier {
 
-    public static Node symplify(Node node) {
+    public static Node simplify(Node node) {
         Rewriter rewriter = new Rewriter();
         return rewriter.applyRules(node, simplificationRules);
     }
@@ -79,13 +79,21 @@ public class Simplifier {
                 BoolConst.of(!getA.apply(unifier))));
 
         Hole intHole = new Hole("int", IntType.TYPE, Node.class);
+        Hole intHole2 = new Hole("int2", IntType.TYPE, Node.class);
         Hole boolHole = new Hole("bool", BoolType.TYPE, Node.class);
+        Hole boolHole2 = new Hole("bool2", BoolType.TYPE, Node.class);
 
         simplificationRules.add(new RewriteRule(new Add(intHole, IntConst.of(0)),
                 RewriteRule.transformInto(intHole)));
 
         simplificationRules.add(new RewriteRule(new Add(IntConst.of(0), intHole),
                 RewriteRule.transformInto(intHole)));
+
+        simplificationRules.add(new RewriteRule(new Add(intHole, new Minus(intHole2)),
+                RewriteRule.transformInto(new Sub(intHole, intHole2))));
+
+        simplificationRules.add(new RewriteRule(new Add(new Minus(intHole), intHole2),
+                RewriteRule.transformInto(new Sub(intHole2, intHole))));
 
         simplificationRules.add(new RewriteRule(new Sub(intHole, IntConst.of(0)),
                 RewriteRule.transformInto(intHole)));
@@ -95,6 +103,12 @@ public class Simplifier {
 
         simplificationRules.add(new RewriteRule(new Sub(intHole, intHole),
                 RewriteRule.transformInto(IntConst.of(0))));
+
+        simplificationRules.add(new RewriteRule(new Minus(new Sub(intHole, intHole2)),
+                RewriteRule.transformInto(new Sub(intHole2, intHole))));
+
+        simplificationRules.add(new RewriteRule(new Sub(intHole, new Minus(intHole2)),
+                RewriteRule.transformInto(new Add(intHole, intHole2))));
 
         simplificationRules.add(new RewriteRule(new Mult(intHole, IntConst.of(1)),
                 RewriteRule.transformInto(intHole)));
@@ -194,6 +208,12 @@ public class Simplifier {
 
         simplificationRules.add(new RewriteRule(new LessOrEqual(intHole, intHole),
                 RewriteRule.transformInto(BoolConst.TRUE)));
+
+        simplificationRules.add(new RewriteRule(new ITE(BoolConst.TRUE, intHole, intHole2),
+                RewriteRule.transformInto(intHole)));
+
+        simplificationRules.add(new RewriteRule(new ITE(BoolConst.FALSE, intHole, intHole2),
+                RewriteRule.transformInto(intHole2)));
     }
 
 }

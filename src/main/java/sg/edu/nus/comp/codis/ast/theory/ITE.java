@@ -77,7 +77,7 @@ public class ITE implements Node {
 
     @Override
     public String toString() {
-        return "(if " + condition.toString() + " " + thenBranch.toString() + " " + elseBranch.toString() + " )";
+        return "(if " + condition.toString() + " " + thenBranch.toString() + " " + elseBranch.toString() + ")";
     }
 
 }

@@ -11,11 +11,18 @@ import java.util.Optional;
  */
 public class Rewriter {
 
+    private static final int MAX_ITERATIONS = 1000;
+
     private boolean modified;
 
     public Node applyRules(Node node, ArrayList<RewriteRule> rules) {
         modified = true;
+        int count = 0;
         while (modified) {
+            count++;
+            if (count > MAX_ITERATIONS) {
+                throw new RuntimeException("Rewriter hangs!");
+            }
             modified = false;
 
             node = Traverse.transform(node, n -> {

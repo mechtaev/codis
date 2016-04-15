@@ -2,7 +2,6 @@ package sg.edu.nus.comp.codis;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sg.edu.nus.comp.codis.ast.Component;
 import sg.edu.nus.comp.codis.ast.Node;
 
 import java.util.*;
@@ -45,14 +44,22 @@ public class CEGIS implements Synthesis {
                 break;
             }
 
-            logger.info("Synthesized program " + node.get());
+            logger.info("Synthesized program: " + node.get());
+            logger.info("Simplified: " + Simplifier.simplify(node.get()));
 
+            boolean counterExampleFound = false;
+            int score = current.size();
             for (TestCase testCase : remaining) {
                 if (!Evaluator.eval(node.get(), testCase.getAssignment()).equals(testCase.getOutput())) {
-                    counterExample = Optional.of(testCase);
-                    break;
+                    if (!counterExampleFound) {
+                        counterExample = Optional.of(testCase);
+                        counterExampleFound = true;
+                    }
+                } else {
+                    score++;
                 }
             }
+            logger.info("Score: " + score + "/" + testSuite.size());
         }
 
         logger.info("Succeeded");

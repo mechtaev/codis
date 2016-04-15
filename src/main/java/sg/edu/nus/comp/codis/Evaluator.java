@@ -10,7 +10,7 @@ import java.util.Map;
 public class Evaluator {
 
     public static Node eval(Node node, Map<ProgramVariable, ? extends Node> assignment) {
-        return Simplifier.symplify(Traverse.substitute(node, assignment));
+        return Simplifier.simplify(Traverse.substitute(node, assignment));
     }
 
 }

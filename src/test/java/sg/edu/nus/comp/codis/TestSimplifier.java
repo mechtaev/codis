@@ -1,6 +1,5 @@
 package sg.edu.nus.comp.codis;
 
-import fj.test.Bool;
 import org.junit.Test;
 import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.*;
@@ -16,14 +15,14 @@ public class TestSimplifier {
     @Test
     public void testNoSimplification() {
         Node n = new Add(ProgramVariable.mkInt("x"), IntConst.of(2));
-        Node s = Simplifier.symplify(n);
+        Node s = Simplifier.simplify(n);
         assertEquals(n, s);
     }
 
     @Test
     public void testEvaluation() {
         Node n = new Add(IntConst.of(1), IntConst.of(2));
-        Node s = Simplifier.symplify(n);
+        Node s = Simplifier.simplify(n);
         assertEquals(IntConst.of(3), s);
     }
 
@@ -32,7 +31,7 @@ public class TestSimplifier {
         Parameter a = Parameter.mkInt("a");
         Parameter p = Parameter.mkInt("p");
         Node n = new Add(p, new Sub(new Mult(IntConst.of(1), a), a));
-        Node s = Simplifier.symplify(n);
+        Node s = Simplifier.simplify(n);
         assertEquals(p, s);
     }
 
@@ -41,7 +40,7 @@ public class TestSimplifier {
         Parameter a = Parameter.mkBool("a");
         Parameter p = Parameter.mkBool("p");
         Node n = new Or(p, new Impl(BoolConst.TRUE, new And(a, new Not(a))));
-        Node s = Simplifier.symplify(n);
+        Node s = Simplifier.simplify(n);
         assertEquals(p, s);
     }
 
