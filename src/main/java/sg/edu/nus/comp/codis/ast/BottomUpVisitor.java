@@ -1,5 +1,6 @@
 package sg.edu.nus.comp.codis.ast;
 
+import sg.edu.nus.comp.codis.Selector;
 import sg.edu.nus.comp.codis.ast.theory.*;
 import sg.edu.nus.comp.codis.ast.theory.IntConst;
 
@@ -58,4 +59,6 @@ public interface BottomUpVisitor {
     void visit(Hole hole);
 
     void visit(ITE ite);
+
+    void visit(Selector selector);
 }

@@ -1,6 +1,7 @@
 package sg.edu.nus.comp.codis;
 
 import com.microsoft.z3.*;
+import fj.data.Array;
 import fj.data.Either;
 import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.*;
@@ -24,7 +25,7 @@ public class Z3 implements Solver {
         }
         HashMap<String, String> cfg = new HashMap<>();
         cfg.put("model", "true");
-        cfg.put("unsat_core", "true");
+        cfg.put("proof", "true");
         this.ctx = new Context(cfg);
         this.solver = ctx.mkSolver();
     }
@@ -47,21 +48,27 @@ public class Z3 implements Solver {
             clause.accept(visitor);
             solver.add((BoolExpr)visitor.getExpr());
         }
-        ArrayList<Expr> assumptionExprs = new ArrayList<>();
+        ArrayList<BoolExpr> assumptionExprs = new ArrayList<>();
         for (Node assumption : assumptions) {
             NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
             assumption.accept(visitor);
-            assumptionExprs.add(visitor.getExpr());
+            assumptionExprs.add((BoolExpr)visitor.getExpr());
         }
-        Expr[] assumptionArray = assumptionExprs.toArray(new Expr[assumptionExprs.size() + 1]);
-        assumptionArray[assumptionArray.length - 1] = ctx.mkBoolConst("fix");
-        Status status = solver.check();
+        BoolExpr[] assumptionArray = assumptionExprs.toArray(new BoolExpr[assumptionExprs.size()]);
+        Status status = solver.check(assumptionArray);
         if (status.equals(Status.SATISFIABLE)) {
             Model model = solver.getModel();
             return Either.left(getAssignment(model, marshaller));
         } else {
-            //TODO extract unsat core
-            throw new UnsupportedOperationException();
+            ArrayList<Node> unsatCore = new ArrayList<>();
+            Expr[] unsatCoreArray = solver.getUnsatCore();
+            ArrayList<Expr> unsatCoreExprs = new ArrayList<>(Arrays.asList(unsatCoreArray));
+            for (int i=0; i<assumptionExprs.size(); i++) {
+                if (unsatCoreExprs.contains(assumptionExprs.get(i))) {
+                    unsatCore.add(assumptions.get(i));
+                }
+            }
+            return Either.right(unsatCore);
         }
     }
 
@@ -285,6 +292,11 @@ public class Z3 implements Solver {
             ArithExpr thenBranch = (ArithExpr) exprs.pop();
             BoolExpr condition = (BoolExpr) exprs.pop();
             exprs.push(ctx.mkITE(condition, thenBranch, elseBranch));
+        }
+
+        @Override
+        public void visit(Selector selector) {
+            processVariable(selector);
         }
 
     }

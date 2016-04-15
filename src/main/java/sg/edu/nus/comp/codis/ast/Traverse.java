@@ -1,5 +1,6 @@
 package sg.edu.nus.comp.codis.ast;
 
+import sg.edu.nus.comp.codis.Selector;
 import sg.edu.nus.comp.codis.ast.theory.*;
 
 import java.util.*;
@@ -181,6 +182,11 @@ public class Traverse {
         @Override
         public void visit(ITE ite) {
             addIfMatches(ite);
+        }
+
+        @Override
+        public void visit(Selector selector) {
+            addIfMatches(selector);
         }
     }
 
@@ -364,6 +370,11 @@ public class Traverse {
             Node thenBranch = nodes.pop();
             Node condition = nodes.pop();
             nodes.push(function.apply(new ITE(condition, thenBranch, elseBranch)));
+        }
+
+        @Override
+        public void visit(Selector selector) {
+            nodes.push(function.apply(selector));
         }
 
     }

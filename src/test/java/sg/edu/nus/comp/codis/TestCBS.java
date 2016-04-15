@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -131,6 +132,21 @@ public class TestCBS {
         Optional<Node> node = synthesizer.synthesize(testSuite, componentMultiset);
         assertTrue(node.isPresent());
         assertEquals(node.get(), new ITE(new Greater(x, y), IntConst.of(1), IntConst.of(0)));
+    }
+
+    @Test
+    public void testTypeRestrictions() {
+        Map<Node, Integer> componentMultiset = new HashMap<>();
+        componentMultiset.put(x, 1);
+        componentMultiset.put(new Minus(new Hole("a", IntType.TYPE, Constant.class)), 1);
+
+        ArrayList<TestCase> testSuite = new ArrayList<>();
+        Map<ProgramVariable, Node> assignment1 = new HashMap<>();
+        assignment1.put(x, IntConst.of(1));
+        testSuite.add(new TestCase(assignment1, IntConst.of(-1)));
+
+        Optional<Node> node = synthesizer.synthesize(testSuite, componentMultiset);
+        assertFalse(node.isPresent());
     }
 
 

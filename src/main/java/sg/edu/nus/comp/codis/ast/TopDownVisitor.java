@@ -1,5 +1,6 @@
 package sg.edu.nus.comp.codis.ast;
 
+import sg.edu.nus.comp.codis.Selector;
 import sg.edu.nus.comp.codis.ast.theory.*;
 
 /**
@@ -57,4 +58,6 @@ public interface TopDownVisitor {
     void visit(Hole hole);
 
     void visit(ITE ite);
+
+    void visit(Selector selector);
 }

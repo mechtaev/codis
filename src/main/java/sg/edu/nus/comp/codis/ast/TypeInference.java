@@ -1,5 +1,6 @@
 package sg.edu.nus.comp.codis.ast;
 
+import sg.edu.nus.comp.codis.Selector;
 import sg.edu.nus.comp.codis.ast.theory.*;
 
 import java.util.ArrayList;
@@ -286,6 +287,12 @@ public class TypeInference {
                 return;
             }
             types.push(IntType.TYPE);
+        }
+
+        @Override
+        public void visit(Selector selector) {
+            if (typeError) return;
+            types.push(BoolType.TYPE);
         }
 
     }

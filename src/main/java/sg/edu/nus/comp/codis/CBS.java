@@ -151,7 +151,8 @@ public class CBS implements Synthesis {
 
         for (ComponentOutput co : outputs) {
             for (ComponentInput ci : inputs) {
-                if (TypeInference.typeOf(ci).equals(TypeInference.typeOf(co))) {
+                if (TypeInference.typeOf(ci).equals(TypeInference.typeOf(co)) &&
+                        ci.getHole().getSuperclass().isInstance(co.getComponent().getSemantics())) {
                     clauses.add(new Impl(new Equal(new Location(ci), new Location(co)), new Equal(ci, co)));
                 } else {
                     clauses.add(new Not(new Equal(new Location(ci), new Location(co))));

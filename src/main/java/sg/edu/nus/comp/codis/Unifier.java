@@ -296,6 +296,12 @@ public class Unifier {
             failed = true;
         }
 
+        @Override
+        public void visit(Selector selector) {
+            if (failed) return;
+            processLeaf(selector);
+        }
+
     }
 
 
