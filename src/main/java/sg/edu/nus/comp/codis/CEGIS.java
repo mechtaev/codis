@@ -13,7 +13,7 @@ public class CEGIS implements Synthesis {
 
     private Synthesis synthesizer;
 
-    private Logger logger = LoggerFactory.getLogger(CBS.class);
+    private Logger logger = LoggerFactory.getLogger(CEGIS.class);
 
     public CEGIS(Synthesis synthesizer) {
         this.synthesizer = synthesizer;
