@@ -54,43 +54,34 @@ public class CBS implements Synthesis {
      * Allocating components on an interval
      *
      * Possible improvements:
-     * 1. Allocate variable before functions
-     * 2. Forbid multiple occurrences
-     * 3. Take into account hole superclass field
+     * 1. Forbid multiple occurrences
+     * 2. Take into account hole superclass field
      */
     public static ArrayList<Node> wellFormedness(ArrayList<Component> components, Component result) {
-        Map<Type, Integer> outputNum = new HashMap<>();
-        for (Component component : components) {
-            Type type = TypeInference.typeOf(component);
-            if (outputNum.containsKey(type)) {
-                outputNum.put(type, outputNum.get(type) + 1);
-            } else {
-                outputNum.put(type, 1);
-            }
-        }
+        ArrayList<Component> variableComponents = new ArrayList<>(components);
+        variableComponents.removeIf(c -> !(c.getSemantics() instanceof Variable || c.getSemantics() instanceof Constant));
+        ArrayList<Component> functionComponents = new ArrayList<>(components);
+        functionComponents.removeIf(c -> c.getSemantics() instanceof Variable || c.getSemantics() instanceof Constant);
 
-        Map<Type, Pair<Integer, Integer>> outputIntervals = new HashMap<>();
-        int lastTypeIndex = 0;
-        for (Type type : outputNum.keySet()) {
-            Pair<Integer, Integer> interval = new ImmutablePair<>(lastTypeIndex, lastTypeIndex + outputNum.get(type));
-            lastTypeIndex = lastTypeIndex + outputNum.get(type);
-            outputIntervals.put(type, interval);
-        }
+        Pair<Integer, Integer> variableOutputInterval = new ImmutablePair<>(0, variableComponents.size());
+        Pair<Integer, Integer> functionOutputInterval = new ImmutablePair<>(variableComponents.size(), components.size());
+        Pair<Integer, Integer> inputInterval = new ImmutablePair<>(0, components.size());
 
         ArrayList<Node> intervalConstraints = new ArrayList<>();
         for (Component component : components) {
             Location outputLocation = new Location(new ComponentOutput(component));
-            Pair<Integer, Integer> outputInterval = outputIntervals.get(TypeInference.typeOf(component));
-            intervalConstraints.add(insideInterval(outputLocation, outputInterval));
+            if (component.getSemantics() instanceof Variable || component.getSemantics() instanceof Constant) {
+                intervalConstraints.add(insideInterval(outputLocation, variableOutputInterval));
+            } else {
+                intervalConstraints.add(insideInterval(outputLocation, functionOutputInterval));
+            }
             for (Hole hole : component.getInputs()) {
                 Location inputLocation = new Location(new ComponentInput(component, hole));
-                Pair<Integer, Integer> inputInterval = outputIntervals.get(TypeInference.typeOf(hole));
                 intervalConstraints.add(insideInterval(inputLocation, inputInterval));
             }
         }
         Hole resultHole = new ArrayList<>(result.getInputs()).get(0);
         Location resultInputLocation = new Location(new ComponentInput(result, resultHole));
-        Pair<Integer, Integer> inputInterval = outputIntervals.get(TypeInference.typeOf(resultHole));
         Node resultInterval = insideInterval(resultInputLocation, inputInterval);
 
         ArrayList<Node> consistencyConstraints = new ArrayList<>();
@@ -145,36 +136,25 @@ public class CBS implements Synthesis {
     }
 
     public static ArrayList<Node> connection(ArrayList<Component> components, Component result) {
-        Map<Type, Set<ComponentOutput>> outputs = new HashMap<>();
-        Map<Type, Set<ComponentInput>> inputs = new HashMap<>();
+        Set<ComponentOutput> outputs = new HashSet<>();
+        Set<ComponentInput> inputs = new HashSet<>();
         for (Component component : components) {
-            Type outputType = TypeInference.typeOf(component);
-            if (!outputs.containsKey(outputType)) {
-                outputs.put(outputType, new HashSet<>());
-            }
-            outputs.get(outputType).add(new ComponentOutput(component));
+            outputs.add(new ComponentOutput(component));
             for (Hole hole : component.getInputs()) {
-                Type inputType = hole.getType();
-                if (!inputs.containsKey(inputType)) {
-                    inputs.put(inputType, new HashSet<>());
-                }
-                inputs.get(inputType).add(new ComponentInput(component, hole));
+                inputs.add(new ComponentInput(component, hole));
             }
         }
+
         Hole resultHole = new ArrayList<>(result.getInputs()).get(0);
-        if (!inputs.containsKey(resultHole.getType())) {
-            inputs.put(resultHole.getType(), new HashSet<>());
-        }
-        // note that result output does not have location
-        inputs.get(resultHole.getType()).add(new ComponentInput(result, resultHole));
+        inputs.add(new ComponentInput(result, resultHole));
         ArrayList<Node> clauses = new ArrayList<>();
-        for (Type type : outputs.keySet()) {
-            if (!inputs.containsKey(type) || !outputs.containsKey(type)) {
-                continue;
-            }
-            for (ComponentOutput co: outputs.get(type)) {
-                for (ComponentInput ci : inputs.get(type)) {
+
+        for (ComponentOutput co : outputs) {
+            for (ComponentInput ci : inputs) {
+                if (TypeInference.typeOf(ci).equals(TypeInference.typeOf(co))) {
                     clauses.add(new Impl(new Equal(new Location(ci), new Location(co)), new Equal(ci, co)));
+                } else {
+                    clauses.add(new Not(new Equal(new Location(ci), new Location(co))));
                 }
             }
         }

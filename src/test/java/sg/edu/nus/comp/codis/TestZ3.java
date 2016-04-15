@@ -1,6 +1,5 @@
 package sg.edu.nus.comp.codis;
 
-import fj.data.Either;
 import org.junit.*;
 import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.*;
