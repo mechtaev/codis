@@ -24,7 +24,6 @@ public class Z3 implements Solver {
         }
         HashMap<String, String> cfg = new HashMap<>();
         cfg.put("model", "true");
-        cfg.put("proof", "true");
         this.ctx = new Context(cfg);
         this.solver = ctx.mkSolver();
     }

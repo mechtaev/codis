@@ -1,4 +1,4 @@
-package sg.edu.nus.comp.codis;
+package sg.edu.nus.comp.codis.ast;
 
 import sg.edu.nus.comp.codis.ast.Node;
 
