@@ -8,6 +8,12 @@ import org.slf4j.LoggerFactory;
 import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.*;
 
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -34,6 +40,19 @@ public class CBS implements Synthesis {
         Type outputType = TypeInference.typeOf(testSuite.get(0).getOutput());
         Component result = new Component(new Hole("result", outputType, Node.class));
         ArrayList<Node> clauses = encode(testSuite, components, result);
+
+        if (logger.isInfoEnabled()) {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS");
+            Date now = new Date();
+            Path logsmt = Paths.get("cbs" + sdf.format(now) + ".smt2");
+            Path logtxt = Paths.get("cbs" + sdf.format(now) + ".txt");
+            try {
+                Files.write(logtxt, clauses.stream().map(Object::toString).collect(Collectors.toList()), Charset.forName("UTF-8"));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
         Optional<Map<Variable, Constant>> assignment = solver.getModel(clauses);
         if (assignment.isPresent()) {
             return Optional.of(decode(assignment.get(), components, result));

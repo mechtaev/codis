@@ -2,11 +2,20 @@ package sg.edu.nus.comp.codis;
 
 import com.microsoft.z3.*;
 import fj.data.Either;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.*;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Created by Sergey Mechtaev on 7/4/2016.
@@ -14,6 +23,8 @@ import java.util.*;
 public class Z3 implements Solver {
 
     private static final Z3 INSTANCE = new Z3();
+
+    private Logger logger = LoggerFactory.getLogger(Z3.class);
 
     private Context ctx;
     private com.microsoft.z3.Solver solver;
@@ -39,20 +50,43 @@ public class Z3 implements Solver {
     @Override
     public Either<Map<Variable, Constant>, ArrayList<Node>> getModelOrCore(ArrayList<Node> clauses,
                                                                            ArrayList<Node> assumptions) {
+
         solver.reset();
         VariableMarshaller marshaller = new VariableMarshaller();
+        List<FuncDecl> decls = new ArrayList<>();
         for (Node clause : clauses) {
             NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
             clause.accept(visitor);
             solver.add((BoolExpr)visitor.getExpr());
+            decls.addAll(visitor.getDecls());
         }
         ArrayList<BoolExpr> assumptionExprs = new ArrayList<>();
         for (Node assumption : assumptions) {
             NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
             assumption.accept(visitor);
             assumptionExprs.add((BoolExpr)visitor.getExpr());
+            decls.addAll(visitor.getDecls());
         }
+
+        if (logger.isInfoEnabled()) {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS");
+            Date now = new Date();
+            Path logsmt = Paths.get("cbs" + sdf.format(now) + ".smt2");
+            try {
+                List<String> entries = new ArrayList<>();
+                entries.add("(set-option :produce-models true)");
+                entries.addAll(new HashSet<>(decls.stream().map(Object::toString).collect(Collectors.toList())));
+                entries.addAll(Arrays.asList(solver.getAssertions()).stream().map(c -> "(assert " + c + ")").collect(Collectors.toList()));
+                entries.add("(check-sat)");
+                entries.add("(get-model)");
+                Files.write(logsmt, entries, Charset.forName("UTF-8"));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
         BoolExpr[] assumptionArray = assumptionExprs.toArray(new BoolExpr[assumptionExprs.size()]);
+
         Status status = solver.check(assumptionArray);
         if (status.equals(Status.SATISFIABLE)) {
             Model model = solver.getModel();
@@ -110,11 +144,14 @@ public class Z3 implements Solver {
     private class NodeTranslatorVisitor implements BottomUpVisitor {
 
         private Stack<Expr> exprs;
+
+        private List<FuncDecl> decls;
         private VariableMarshaller marshaller;
 
         NodeTranslatorVisitor(VariableMarshaller marshaller) {
             this.marshaller = marshaller;
             this.exprs = new Stack<>();
+            this.decls = new ArrayList<>();
         }
 
         Expr getExpr() {
@@ -122,11 +159,17 @@ public class Z3 implements Solver {
             return exprs.peek();
         }
 
+        List<FuncDecl> getDecls() {
+            return decls;
+        }
+
         private void processVariable(Variable variable) {
             if (TypeInference.typeOf(variable).equals(IntType.TYPE)) {
                 exprs.push(ctx.mkIntConst(marshaller.toString(variable)));
+                decls.add(ctx.mkConstDecl(marshaller.toString(variable), ctx.getIntSort()));
             } else if (TypeInference.typeOf(variable).equals(BoolType.TYPE)) {
                 exprs.push(ctx.mkBoolConst(marshaller.toString(variable)));
+                decls.add(ctx.mkConstDecl(marshaller.toString(variable), ctx.getBoolSort()));
             } else {
                 throw new UnsupportedOperationException();
             }

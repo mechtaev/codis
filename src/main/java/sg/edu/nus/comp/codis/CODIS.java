@@ -23,5 +23,4 @@ public class CODIS implements Synthesis {
         throw new UnsupportedOperationException();
     }
 
-
 }
