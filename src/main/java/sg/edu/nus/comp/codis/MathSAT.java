@@ -1,7 +1,6 @@
 package sg.edu.nus.comp.codis;
 
 import fj.data.Either;
-import mathsat.api;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sg.edu.nus.comp.codis.ast.*;
@@ -15,7 +14,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Created by Alberto Griggio on 28/4/2016.
@@ -114,8 +112,15 @@ public class MathSAT implements Solver {
         int status = mathsat.api.msat_solve_with_assumptions(solver, assumptionArray);
         if (status == mathsat.api.MSAT_SAT) {
             long model = mathsat.api.msat_get_model(solver);
-            return Either.left(getAssignment(model, marshaller));
-        } else if (status == api.MSAT_UNKNOWN) {
+            if (mathsat.api.MSAT_ERROR_MODEL(model)) {
+                throw msatError();
+            }
+            try {
+                return Either.left(getAssignment(model, marshaller));
+            } finally {
+                mathsat.api.msat_destroy_model(model);
+            }
+        } else if (status == mathsat.api.MSAT_UNKNOWN) {
             throw msatError();
         } else {
             ArrayList<Node> unsatCore = new ArrayList<>();
