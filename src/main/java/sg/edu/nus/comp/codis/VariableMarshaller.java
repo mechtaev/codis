@@ -22,23 +22,25 @@ public class VariableMarshaller {
     }
 
     private static String getLiteral(Variable variable) {
-        if (variable instanceof ProgramVariable) {
-            return "v";
-        } else if (variable instanceof Parameter) {
-            return "p";
-        } else if (variable instanceof Hole) {
-            return "h";
-        } else if (variable instanceof Location) {
-            return "l";
-        } else if (variable instanceof ComponentInput) {
-            return "ci";
-        } else if (variable instanceof ComponentOutput) {
-            return "co";
-        } else if (variable instanceof TestInstance) {
-            return "i";
-        } else {
-            return "?";
-        }
+        return variable.toString();
+//
+//        if (variable instanceof ProgramVariable) {
+//            return "v";
+//        } else if (variable instanceof Parameter) {
+//            return "p";
+//        } else if (variable instanceof Hole) {
+//            return "h";
+//        } else if (variable instanceof Location) {
+//            return "l";
+//        } else if (variable instanceof ComponentInput) {
+//            return "ci";
+//        } else if (variable instanceof ComponentOutput) {
+//            return "co";
+//        } else if (variable instanceof TestInstance) {
+//            return "i";
+//        } else {
+//            return "?";
+//        }
     }
 
     public String toString(Variable variable) {
