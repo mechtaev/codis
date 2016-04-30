@@ -305,7 +305,7 @@ public class TypeInference {
             types.push(bvConst.getType());
         }
 
-        private Optional<BVType> checkBVBinaryOpTypes(BinaryOp op) { // not used explicitely but verify that binaryop
+        private Optional<BVType> checkBVBinaryOpTypes(BinaryOp op) { // not used explicitly but verify that binaryop
             if (types.size() < 2) {
                 typeError = true;
                 return Optional.empty();

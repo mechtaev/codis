@@ -66,4 +66,6 @@ public class Components {
     public static final Node BVAND = new BVAnd(t, p);
     public static final Node BVOR = new BVOr(t, p);
     public static final Node BVNOT = new BVNot(t);
+
+    public static final Node BVITE = new ITE(a, t, p);
 }

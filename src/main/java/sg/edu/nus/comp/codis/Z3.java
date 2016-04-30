@@ -67,7 +67,7 @@ public class Z3 implements Solver {
             decls.addAll(visitor.getDecls());
         }
 
-        if (logger.isInfoEnabled()) {
+        if (logger.isTraceEnabled()) {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS");
             Date now = new Date();
             Path logsmt = Paths.get("cbs" + sdf.format(now) + ".smt2");
