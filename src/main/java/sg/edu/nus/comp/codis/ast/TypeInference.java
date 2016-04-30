@@ -429,7 +429,7 @@ public class TypeInference {
                 typeError = true;
                 return;
             }
-            this.types.push(type.get());
+            this.types.push(BoolType.TYPE);
         }
 
         @Override
@@ -440,7 +440,7 @@ public class TypeInference {
                 typeError = true;
                 return;
             }
-            this.types.push(type.get());
+            this.types.push(BoolType.TYPE);
         }
 
         @Override
@@ -451,7 +451,7 @@ public class TypeInference {
                 typeError = true;
                 return;
             }
-            this.types.push(type.get());
+            this.types.push(BoolType.TYPE);
         }
 
         @Override
@@ -462,7 +462,7 @@ public class TypeInference {
                 typeError = true;
                 return;
             }
-            this.types.push(type.get());
+            this.types.push(BoolType.TYPE);
         }
 
         @Override
@@ -528,7 +528,7 @@ public class TypeInference {
                 typeError = true;
                 return;
             }
-            this.types.push(type.get());
+            this.types.push(BoolType.TYPE);
         }
 
         @Override
@@ -539,7 +539,7 @@ public class TypeInference {
                 typeError = true;
                 return;
             }
-            this.types.push(type.get());
+            this.types.push(BoolType.TYPE);
         }
 
         @Override
@@ -550,7 +550,7 @@ public class TypeInference {
                 typeError = true;
                 return;
             }
-            this.types.push(type.get());
+            this.types.push(BoolType.TYPE);
         }
 
         @Override
@@ -561,7 +561,7 @@ public class TypeInference {
                 typeError = true;
                 return;
             }
-            this.types.push(type.get());
+            this.types.push(BoolType.TYPE);
         }
 
         @Override

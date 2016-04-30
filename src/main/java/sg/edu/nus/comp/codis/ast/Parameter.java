@@ -31,6 +31,9 @@ public class Parameter extends Variable {
         return new Parameter(name, BoolType.TYPE);
     }
 
+    public static Parameter mkBV(String name, int size) {
+        return new Parameter(name, new BVType(size));
+    }
 
     @Override
     public boolean equals(Object obj) {

@@ -18,15 +18,19 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestCBS {
 
-    private static Synthesis synthesizer;
+    private static Synthesis intSynthesizer;
+    private static Synthesis bvSynthesizer;
 
     @BeforeClass
     public static void initSolver() {
-        synthesizer = new CBS(Z3.getInstance());
+        intSynthesizer = new CBS(Z3.getInstance(), false);
+        bvSynthesizer = new CBS(Z3.getInstance(), true);
     }
 
     private final ProgramVariable x = ProgramVariable.mkInt("x");
     private final ProgramVariable y = ProgramVariable.mkInt("y");
+    private final ProgramVariable bvX = ProgramVariable.mkBV("x", 32);
+    private final ProgramVariable bvY = ProgramVariable.mkBV("y", 32);
 
     @Test
     public void testVariableChoice() {
@@ -45,7 +49,7 @@ public class TestCBS {
         assignment2.put(y, IntConst.of(2));
         testSuite.add(new TestCase(assignment2, IntConst.of(1)));
 
-        Optional<Node> node = synthesizer.synthesize(testSuite, componentMultiset);
+        Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
         assertTrue(node.isPresent());
         assertEquals(node.get(), x);
     }
@@ -69,7 +73,7 @@ public class TestCBS {
         assignment2.put(y, IntConst.of(2));
         testSuite.add(new TestCase(assignment2, IntConst.of(3)));
 
-        Optional<Node> node = synthesizer.synthesize(testSuite, componentMultiset);
+        Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
         assertTrue(node.isPresent());
         assertTrue(node.get().equals(new Add(x, y)) || node.get().equals(new Add(y, x)));
     }
@@ -98,7 +102,7 @@ public class TestCBS {
         assignment3.put(y, IntConst.of(1));
         testSuite.add(new TestCase(assignment3, BoolConst.FALSE));
 
-        Optional<Node> node = synthesizer.synthesize(testSuite, componentMultiset);
+        Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
         assertTrue(node.isPresent());
         assertEquals(node.get(), new Greater(x, y));
     }
@@ -129,7 +133,7 @@ public class TestCBS {
         assignment3.put(y, IntConst.of(1));
         testSuite.add(new TestCase(assignment3, IntConst.of(0)));
 
-        Optional<Node> node = synthesizer.synthesize(testSuite, componentMultiset);
+        Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
         assertTrue(node.isPresent());
         assertEquals(node.get(), new ITE(new Greater(x, y), IntConst.of(1), IntConst.of(0)));
     }
@@ -145,9 +149,37 @@ public class TestCBS {
         assignment1.put(x, IntConst.of(1));
         testSuite.add(new TestCase(assignment1, IntConst.of(-1)));
 
-        Optional<Node> node = synthesizer.synthesize(testSuite, componentMultiset);
+        Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
         assertFalse(node.isPresent());
     }
 
+    @Test
+    public void testBVArithmeticAndLogic() {
+        Map<Node, Integer> componentMultiset = new HashMap<>();
+        componentMultiset.put(bvX, 1);
+        componentMultiset.put(bvY, 1);
+        componentMultiset.put(Components.BVUGT, 1);
+        componentMultiset.put(Components.BVUGE, 1);
+
+        ArrayList<TestCase> testSuite = new ArrayList<>();
+        Map<ProgramVariable, Node> assignment1 = new HashMap<>();
+        assignment1.put(bvX, BVConst.ofLong(2, 32));
+        assignment1.put(bvY, BVConst.ofLong(1, 32));
+        testSuite.add(new TestCase(assignment1, BoolConst.TRUE));
+
+        Map<ProgramVariable, Node> assignment2 = new HashMap<>();
+        assignment2.put(bvX, BVConst.ofLong(1, 32));
+        assignment2.put(bvY, BVConst.ofLong(2, 32));
+        testSuite.add(new TestCase(assignment2, BoolConst.FALSE));
+
+        Map<ProgramVariable, Node> assignment3 = new HashMap<>();
+        assignment3.put(bvX, BVConst.ofLong(1, 32));
+        assignment3.put(bvY, BVConst.ofLong(1, 32));
+        testSuite.add(new TestCase(assignment3, BoolConst.FALSE));
+
+        Optional<Node> node = bvSynthesizer.synthesize(testSuite, componentMultiset);
+        assertTrue(node.isPresent());
+        assertEquals(node.get(), new BVUnsignedGreater(bvX, bvY));
+    }
 
 }

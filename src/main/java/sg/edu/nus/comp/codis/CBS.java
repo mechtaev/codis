@@ -29,8 +29,11 @@ public class CBS implements Synthesis {
 
     private Solver solver;
 
-    public CBS(Solver solver) {
+    private boolean useBV32 = true;
+
+    public CBS(Solver solver, boolean useBV32) {
         this.solver = solver;
+        this.useBV32 = useBV32;
     }
 
     @Override
