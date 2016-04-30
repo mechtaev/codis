@@ -9,14 +9,21 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 public class Location extends Variable {
 
     private Variable variable;
+    private Type type;
 
     public Variable getVariable() {
         return variable;
     }
 
-    public Location(Variable variable) {
+    public Type getType() {
+        return type;
+    }
+
+    public Location(Variable variable, Type type) {
         assert variable instanceof ComponentInput || variable instanceof ComponentOutput;
+        assert type instanceof IntType || type instanceof BVType;
         this.variable = variable;
+        this.type = type;
     }
 
     @Override

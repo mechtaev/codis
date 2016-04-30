@@ -341,8 +341,8 @@ public class Z3 implements Solver {
 
         @Override
         public void visit(ITE ite) {
-            ArithExpr elseBranch = (ArithExpr) exprs.pop();
-            ArithExpr thenBranch = (ArithExpr) exprs.pop();
+            Expr elseBranch = exprs.pop();
+            Expr thenBranch = exprs.pop();
             BoolExpr condition = (BoolExpr) exprs.pop();
             exprs.push(ctx.mkITE(condition, thenBranch, elseBranch));
         }

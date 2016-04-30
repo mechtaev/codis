@@ -29,11 +29,15 @@ public class CBS implements Synthesis {
 
     private Solver solver;
 
-    private boolean useBV32 = true;
+    private Type encodingType;
 
     public CBS(Solver solver, boolean useBV32) {
         this.solver = solver;
-        this.useBV32 = useBV32;
+        if (useBV32) {
+            encodingType = new BVType(32);
+        } else {
+            encodingType = IntType.TYPE;
+        }
     }
 
     @Override
@@ -63,7 +67,7 @@ public class CBS implements Synthesis {
         }
     }
 
-    public static ArrayList<Component> flattenComponentMultiset(Map<Node, Integer> componentMultiset) {
+    public ArrayList<Component> flattenComponentMultiset(Map<Node, Integer> componentMultiset) {
         ArrayList<Component> components = new ArrayList<>();
         for (Node node : componentMultiset.keySet()) {
             IntStream.range(0, componentMultiset.get(node)).forEach(i -> components.add(new Component(node)));
@@ -78,7 +82,7 @@ public class CBS implements Synthesis {
      * 1. Forbid multiple occurrences
      * 2. Take into account hole superclass field
      */
-    public static ArrayList<Node> wellFormedness(ArrayList<Component> components, Component result) {
+    public ArrayList<Node> wellFormedness(ArrayList<Component> components, Component result) {
         ArrayList<Component> variableComponents = new ArrayList<>(components);
         variableComponents.removeIf(c -> !(c.getSemantics() instanceof Variable || c.getSemantics() instanceof Constant));
         ArrayList<Component> functionComponents = new ArrayList<>(components);
@@ -90,27 +94,27 @@ public class CBS implements Synthesis {
 
         ArrayList<Node> intervalConstraints = new ArrayList<>();
         for (Component component : components) {
-            Location outputLocation = new Location(new ComponentOutput(component));
+            Location outputLocation = new Location(new ComponentOutput(component), encodingType);
             if (component.getSemantics() instanceof Variable || component.getSemantics() instanceof Constant) {
                 intervalConstraints.add(insideInterval(outputLocation, variableOutputInterval));
             } else {
                 intervalConstraints.add(insideInterval(outputLocation, functionOutputInterval));
             }
             for (Hole hole : component.getInputs()) {
-                Location inputLocation = new Location(new ComponentInput(component, hole));
+                Location inputLocation = new Location(new ComponentInput(component, hole), encodingType);
                 intervalConstraints.add(insideInterval(inputLocation, inputInterval));
             }
         }
         Hole resultHole = new ArrayList<>(result.getInputs()).get(0);
-        Location resultInputLocation = new Location(new ComponentInput(result, resultHole));
+        Location resultInputLocation = new Location(new ComponentInput(result, resultHole), encodingType);
         Node resultInterval = insideInterval(resultInputLocation, inputInterval);
 
         ArrayList<Node> consistencyConstraints = new ArrayList<>();
         for (Component firstComponent : components) {
             for (Component secondComponent : components) {
                 if (!firstComponent.equals(secondComponent)) {
-                    Location firstLocation = new Location(new ComponentOutput(firstComponent));
-                    Location secondLocation = new Location(new ComponentOutput(secondComponent));
+                    Location firstLocation = new Location(new ComponentOutput(firstComponent), encodingType);
+                    Location secondLocation = new Location(new ComponentOutput(secondComponent), encodingType);
                     consistencyConstraints.add(new Not(new Equal(firstLocation, secondLocation)));
                 }
             }
@@ -118,10 +122,14 @@ public class CBS implements Synthesis {
 
         ArrayList<Node> acyclicityConstraints = new ArrayList<>();
         for (Component component : components) {
-            Location outputLocation = new Location(new ComponentOutput(component));
+            Location outputLocation = new Location(new ComponentOutput(component), encodingType);
             for (Hole hole : component.getInputs()) {
-                Location inputLocation = new Location(new ComponentInput(component, hole));
-                acyclicityConstraints.add(new Less(inputLocation, outputLocation));
+                Location inputLocation = new Location(new ComponentInput(component, hole), encodingType);
+                if (encodingType instanceof BVType) {
+                    acyclicityConstraints.add(new BVUnsignedLess(inputLocation, outputLocation));
+                } else {
+                    acyclicityConstraints.add(new Less(inputLocation, outputLocation));
+                }
             }
         }
 
@@ -136,11 +144,17 @@ public class CBS implements Synthesis {
     /**
      * insideInterval(v, (l, r)) returns l <= v < r
      */
-    private static Node insideInterval(Variable v, Pair<Integer, Integer> interval) {
-        return new And(new LessOrEqual(IntConst.of(interval.getLeft()), v), new Less(v, IntConst.of(interval.getRight())));
+    private Node insideInterval(Variable v, Pair<Integer, Integer> interval) {
+        if (encodingType instanceof BVType) {
+            BVConst left = BVConst.ofLong(interval.getLeft(), ((BVType) encodingType).getSize());
+            BVConst right = BVConst.ofLong(interval.getRight(), ((BVType) encodingType).getSize());
+            return new And(new BVUnsignedLessOrEqual(left, v), new BVUnsignedLess(v, right));
+        } else {
+            return new And(new LessOrEqual(IntConst.of(interval.getLeft()), v), new Less(v, IntConst.of(interval.getRight())));
+        }
     }
 
-    public static ArrayList<Node> library(ArrayList<Component> components, Component result) {
+    public ArrayList<Node> library(ArrayList<Component> components, Component result) {
         ArrayList<Node> libraryConstraints = new ArrayList<>();
         for (Component component : components) {
             ComponentOutput output = new ComponentOutput(component);
@@ -156,7 +170,7 @@ public class CBS implements Synthesis {
         return libraryConstraints;
     }
 
-    public static ArrayList<Node> connection(ArrayList<Component> components, Component result) {
+    public ArrayList<Node> connection(ArrayList<Component> components, Component result) {
         Set<ComponentOutput> outputs = new HashSet<>();
         Set<ComponentInput> inputs = new HashSet<>();
         for (Component component : components) {
@@ -174,16 +188,17 @@ public class CBS implements Synthesis {
             for (ComponentInput ci : inputs) {
                 if (TypeInference.typeOf(ci).equals(TypeInference.typeOf(co)) &&
                         ci.getHole().getSuperclass().isInstance(co.getComponent().getSemantics())) {
-                    clauses.add(new Impl(new Equal(new Location(ci), new Location(co)), new Equal(ci, co)));
+                    clauses.add(new Impl(new Equal(new Location(ci, encodingType), new Location(co, encodingType)),
+                                         new Equal(ci, co)));
                 } else {
-                    clauses.add(new Not(new Equal(new Location(ci), new Location(co))));
+                    clauses.add(new Not(new Equal(new Location(ci, encodingType), new Location(co, encodingType))));
                 }
             }
         }
         return clauses;
     }
 
-    public static Node instantiate(Node node, TestCase testCase) {
+    public Node instantiate(Node node, TestCase testCase) {
         return Traverse.transform(node, n -> {
             if (n instanceof ProgramVariable) {
                 return new TestInstance((ProgramVariable)n, testCase);
@@ -196,7 +211,7 @@ public class CBS implements Synthesis {
         });
     }
 
-    public static ArrayList<Node> testToConstraint(TestCase testCase, Component result) {
+    public ArrayList<Node> testToConstraint(TestCase testCase, Component result) {
         ArrayList<Node> clauses = new ArrayList<>();
         clauses.add(new Equal(new TestInstance(new ComponentOutput(result), testCase), testCase.getOutput()));
         for (ProgramVariable variable : testCase.getAssignment().keySet()) {
@@ -206,7 +221,7 @@ public class CBS implements Synthesis {
         return clauses;
     }
 
-    public static ArrayList<Node> encode(ArrayList<TestCase> testSuite, ArrayList<Component> components, Component result) {
+    public ArrayList<Node> encode(ArrayList<TestCase> testSuite, ArrayList<Component> components, Component result) {
         ArrayList<Node> wfp = wellFormedness(components, result);
         ArrayList<Node> lib = library(components, result);
         ArrayList<Node> connections = connection(components, result);
@@ -224,14 +239,14 @@ public class CBS implements Synthesis {
         return clauses;
     }
 
-    public static Node decode(Map<Variable, Constant> assignment, ArrayList<Component> components, Component result) {
+    public Node decode(Map<Variable, Constant> assignment, ArrayList<Component> components, Component result) {
         Hole resultHole = new ArrayList<>(result.getInputs()).get(0);
-        Location root = new Location(new ComponentInput(result, resultHole));
+        Location root = new Location(new ComponentInput(result, resultHole), encodingType);
         Node node = buildFromRoot(assignment, components, root);
         return substituteParameters(assignment, node);
     }
 
-    public static Node substituteParameters(Map<Variable, Constant> assignment, Node node) {
+    public Node substituteParameters(Map<Variable, Constant> assignment, Node node) {
         Map<Parameter, Constant> parameterValuation = new HashMap<>();
         for (Variable variable : assignment.keySet()) {
             if (variable instanceof Parameter) {
@@ -241,7 +256,7 @@ public class CBS implements Synthesis {
         return Traverse.substitute(node, parameterValuation);
     }
 
-    private static Node buildFromRoot(Map<Variable, Constant> assignment, ArrayList<Component> components, Location root) {
+    private Node buildFromRoot(Map<Variable, Constant> assignment, ArrayList<Component> components, Location root) {
         if (!assignment.containsKey(root)) {
             throw new RuntimeException("undefined location");
         }
@@ -263,7 +278,9 @@ public class CBS implements Synthesis {
         }
         Component rootComponent = ((ComponentOutput)reference.get()).getComponent();
         Map<Variable, Node> mapping = rootComponent.getInputs().stream().collect(Collectors.toMap(Function.identity(),
-                hole -> buildFromRoot(assignment, components, new Location(new ComponentInput(rootComponent, hole)))));
+                hole -> buildFromRoot(assignment,
+                                      components,
+                                      new Location(new ComponentInput(rootComponent, hole), encodingType))));
         return Traverse.substitute(rootComponent.getSemantics(), mapping);
     }
 }

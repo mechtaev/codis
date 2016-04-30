@@ -61,7 +61,7 @@ public class TypeInference {
         @Override
         public void visit(Location location) {
             if (typeError) return;
-            types.push(IntType.TYPE);
+            types.push(location.getType());
         }
 
         @Override
