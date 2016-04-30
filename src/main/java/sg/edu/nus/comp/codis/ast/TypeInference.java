@@ -4,6 +4,7 @@ import sg.edu.nus.comp.codis.ast.theory.*;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.Stack;
 
 /**
@@ -278,20 +279,311 @@ public class TypeInference {
         @Override
         public void visit(ITE ite) {
             if (typeError) return;
-            if (types.size() < 3 ||
-                    !types.pop().equals(IntType.TYPE) ||
-                    !types.pop().equals(IntType.TYPE) ||
-                    !types.pop().equals(BoolType.TYPE)) {
+            if (types.size() < 3) {
                 typeError = true;
                 return;
             }
-            types.push(IntType.TYPE);
+            Type second = types.pop();
+            Type first = types.pop();
+            Type condition = types.pop();
+            if (!first.equals(second) || !condition.equals(BoolType.TYPE)) {
+                typeError = true;
+                return;
+            }
+            types.push(first);
         }
 
         @Override
         public void visit(Selector selector) {
             if (typeError) return;
             types.push(BoolType.TYPE);
+        }
+
+        @Override
+        public void visit(BVConst bvConst) {
+            if (typeError) return;
+            types.push(bvConst.getType());
+        }
+
+        private Optional<BVType> checkBVBinaryOpTypes(BinaryOp op) { // not used explicitely but verify that binaryop
+            if (types.size() < 2) {
+                typeError = true;
+                return Optional.empty();
+            }
+            Type right = types.pop();
+            Type left = types.pop();
+            if (!(right instanceof BVType) || !right.equals(left)) {
+                typeError = true;
+                return Optional.empty();
+            }
+            return Optional.of((BVType)right);
+        }
+
+        private Optional<BVType> checkBVUnaryOpTypes(UnaryOp op) {
+            if (types.size() < 1) {
+                typeError = true;
+                return Optional.empty();
+            }
+            Type arg = types.pop();
+            if (!(arg instanceof BVType)) {
+                typeError = true;
+                return Optional.empty();
+            }
+            return Optional.of((BVType)arg);
+        }
+
+
+        @Override
+        public void visit(BVAdd bvAdd) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvAdd);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVAnd bvAnd) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvAnd);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVMult bvMult) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvMult);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVNeg bvNeg) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVUnaryOpTypes(bvNeg);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVNot bvNot) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVUnaryOpTypes(bvNot);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVOr bvOr) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvOr);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVShiftLeft bvShiftLeft) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvShiftLeft);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVSignedDiv bvSignedDiv) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvSignedDiv);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVSignedGreater bvSignedGreater) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvSignedGreater);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVSignedGreaterOrEqual bvSignedGreaterOrEqual) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvSignedGreaterOrEqual);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVSignedLess bvSignedLess) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvSignedLess);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVSignedLessOrEqual bvSignedLessOrEqual) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvSignedLessOrEqual);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVSignedModulo bvSignedModulo) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvSignedModulo);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVSignedRemainder bvSignedRemainder) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvSignedRemainder);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVSignedShiftRight bvSignedShiftRight) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvSignedShiftRight);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVSub bvSub) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvSub);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVUnsignedDiv bvUnsignedDiv) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvUnsignedDiv);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVUnsignedGreater bvUnsignedGreater) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvUnsignedGreater);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVUnsignedGreaterOrEqual bvUnsignedGreaterOrEqual) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvUnsignedGreaterOrEqual);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVUnsignedLess bvUnsignedLess) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvUnsignedLess);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVUnsignedLessOrEqual bvUnsignedLessOrEqual) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvUnsignedLessOrEqual);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVUnsignedRemainder bvUnsignedRemainder) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvUnsignedRemainder);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVUnsignedShiftRight bvUnsignedShiftRight) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvUnsignedShiftRight);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
         }
 
     }

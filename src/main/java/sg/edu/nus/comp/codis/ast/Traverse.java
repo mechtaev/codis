@@ -187,6 +187,126 @@ public class Traverse {
         public void visit(Selector selector) {
             addIfMatches(selector);
         }
+
+        @Override
+        public void visit(BVConst bvConst) {
+            addIfMatches(bvConst);
+        }
+
+        @Override
+        public void visit(BVAdd bvAdd) {
+            addIfMatches(bvAdd);
+        }
+
+        @Override
+        public void visit(BVAnd bvAnd) {
+            addIfMatches(bvAnd);
+        }
+
+        @Override
+        public void visit(BVMult bvMult) {
+            addIfMatches(bvMult);
+        }
+
+        @Override
+        public void visit(BVNeg bvNeg) {
+            addIfMatches(bvNeg);
+        }
+
+        @Override
+        public void visit(BVNot bvNot) {
+            addIfMatches(bvNot);
+        }
+
+        @Override
+        public void visit(BVOr bvOr) {
+            addIfMatches(bvOr);
+        }
+
+        @Override
+        public void visit(BVShiftLeft bvShiftLeft) {
+            addIfMatches(bvShiftLeft);
+        }
+
+        @Override
+        public void visit(BVSignedDiv bvSignedDiv) {
+            addIfMatches(bvSignedDiv);
+        }
+
+        @Override
+        public void visit(BVSignedGreater bvSignedGreater) {
+            addIfMatches(bvSignedGreater);
+        }
+
+        @Override
+        public void visit(BVSignedGreaterOrEqual bvSignedGreaterOrEqual) {
+            addIfMatches(bvSignedGreaterOrEqual);
+        }
+
+        @Override
+        public void visit(BVSignedLess bvSignedLess) {
+            addIfMatches(bvSignedLess);
+        }
+
+        @Override
+        public void visit(BVSignedLessOrEqual bvSignedLessOrEqual) {
+            addIfMatches(bvSignedLessOrEqual);
+        }
+
+        @Override
+        public void visit(BVSignedModulo bvSignedModulo) {
+            addIfMatches(bvSignedModulo);
+        }
+
+        @Override
+        public void visit(BVSignedRemainder bvSignedRemainder) {
+            addIfMatches(bvSignedRemainder);
+        }
+
+        @Override
+        public void visit(BVSignedShiftRight bvSignedShiftRight) {
+            addIfMatches(bvSignedShiftRight);
+        }
+
+        @Override
+        public void visit(BVSub bvSub) {
+            addIfMatches(bvSub);
+        }
+
+        @Override
+        public void visit(BVUnsignedDiv bvUnsignedDiv) {
+            addIfMatches(bvUnsignedDiv);
+        }
+
+        @Override
+        public void visit(BVUnsignedGreater bvUnsignedGreater) {
+            addIfMatches(bvUnsignedGreater);
+        }
+
+        @Override
+        public void visit(BVUnsignedGreaterOrEqual bvUnsignedGreaterOrEqual) {
+            addIfMatches(bvUnsignedGreaterOrEqual);
+        }
+
+        @Override
+        public void visit(BVUnsignedLess bvUnsignedLess) {
+            addIfMatches(bvUnsignedLess);
+        }
+
+        @Override
+        public void visit(BVUnsignedLessOrEqual bvUnsignedLessOrEqual) {
+            addIfMatches(bvUnsignedLessOrEqual);
+        }
+
+        @Override
+        public void visit(BVUnsignedRemainder bvUnsignedRemainder) {
+            addIfMatches(bvUnsignedRemainder);
+        }
+
+        @Override
+        public void visit(BVUnsignedShiftRight bvUnsignedShiftRight) {
+            addIfMatches(bvUnsignedShiftRight);
+        }
     }
 
     private static class TransformationVisitor implements BottomUpVisitor {
@@ -374,6 +494,172 @@ public class Traverse {
         @Override
         public void visit(Selector selector) {
             nodes.push(function.apply(selector));
+        }
+
+        @Override
+        public void visit(BVConst bvConst) {
+            nodes.push(function.apply(bvConst));
+        }
+
+        @Override
+        public void visit(BVAdd bvAdd) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVAdd(left, right)));
+        }
+
+        @Override
+        public void visit(BVAnd bvAnd) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVAnd(left, right)));
+        }
+
+        @Override
+        public void visit(BVMult bvMult) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new Mult(left, right)));
+
+        }
+
+        @Override
+        public void visit(BVNeg bvNeg) {
+            Node arg = nodes.pop();
+            nodes.push(function.apply(new BVNeg(arg)));
+        }
+
+        @Override
+        public void visit(BVNot bvNot) {
+            Node arg = nodes.pop();
+            nodes.push(function.apply(new BVNot(arg)));
+        }
+
+        @Override
+        public void visit(BVOr bvOr) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVOr(left, right)));
+        }
+
+        @Override
+        public void visit(BVShiftLeft bvShiftLeft) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVShiftLeft(left, right)));
+
+        }
+
+        @Override
+        public void visit(BVSignedDiv bvSignedDiv) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVSignedDiv(left, right)));
+        }
+
+        @Override
+        public void visit(BVSignedGreater bvSignedGreater) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVSignedGreater(left, right)));
+        }
+
+        @Override
+        public void visit(BVSignedGreaterOrEqual bvSignedGreaterOrEqual) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVSignedGreaterOrEqual(left, right)));
+        }
+
+        @Override
+        public void visit(BVSignedLess bvSignedLess) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVShiftLeft(left, right)));
+        }
+
+        @Override
+        public void visit(BVSignedLessOrEqual bvSignedLessOrEqual) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVSignedLessOrEqual(left, right)));
+        }
+
+        @Override
+        public void visit(BVSignedModulo bvSignedModulo) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVSignedModulo(left, right)));
+        }
+
+        @Override
+        public void visit(BVSignedRemainder bvSignedRemainder) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVSignedRemainder(left, right)));
+        }
+
+        @Override
+        public void visit(BVSignedShiftRight bvSignedShiftRight) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVSignedShiftRight(left, right)));
+        }
+
+        @Override
+        public void visit(BVSub bvSub) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVSub(left, right)));
+        }
+
+        @Override
+        public void visit(BVUnsignedDiv bvUnsignedDiv) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVUnsignedDiv(left, right)));
+        }
+
+        @Override
+        public void visit(BVUnsignedGreater bvUnsignedGreater) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVUnsignedGreater(left, right)));
+        }
+
+        @Override
+        public void visit(BVUnsignedGreaterOrEqual bvUnsignedGreaterOrEqual) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVUnsignedGreaterOrEqual(left, right)));
+        }
+
+        @Override
+        public void visit(BVUnsignedLess bvUnsignedLess) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVUnsignedLess(left, right)));
+        }
+
+        @Override
+        public void visit(BVUnsignedLessOrEqual bvUnsignedLessOrEqual) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVUnsignedLessOrEqual(left, right)));
+        }
+
+        @Override
+        public void visit(BVUnsignedRemainder bvUnsignedRemainder) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVUnsignedRemainder(left, right)));
+        }
+
+        @Override
+        public void visit(BVUnsignedShiftRight bvUnsignedShiftRight) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVUnsignedShiftRight(left, right)));
         }
 
     }

@@ -50,4 +50,17 @@ public class TestZ3 {
         assertTrue(unsatCore.right().value().contains(new Not(a)));
         assertFalse(unsatCore.right().value().contains(new Not(b)));
     }
+
+    @Test
+    public void testBitvectors() {
+        ArrayList<Node> clauses = new ArrayList<>();
+        ProgramVariable x = ProgramVariable.mkBV("x", 32);
+        ProgramVariable y = ProgramVariable.mkBV("y", 32);
+        clauses.add(new Equal(new BVAdd(x, y), BVConst.ofLong(5, 32)));
+        clauses.add(new Equal(y, BVConst.ofLong(2, 32)));
+        Optional<Map<Variable, Constant>> model = Z3.getInstance().getModel(clauses);
+        assertTrue(model.isPresent());
+        assertEquals(model.get().get(x), BVConst.ofLong(3, 32));
+    }
+
 }

@@ -1,6 +1,5 @@
 package sg.edu.nus.comp.codis;
 
-import fj.P;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;

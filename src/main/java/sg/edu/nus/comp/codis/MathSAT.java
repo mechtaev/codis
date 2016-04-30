@@ -418,6 +418,126 @@ public class MathSAT implements Solver {
             processVariable(selector);
         }
 
+        @Override
+        public void visit(BVConst bvConst) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVAdd bvAdd) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVAnd bvAnd) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVMult bvMult) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVNeg bvNeg) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVNot bvNot) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVOr bvOr) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVShiftLeft bvShiftLeft) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVSignedDiv bvSignedDiv) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVSignedGreater bvSignedGreater) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVSignedGreaterOrEqual bvSignedGreaterOrEqual) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVSignedLess bvSignedLess) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVSignedLessOrEqual bvSignedLessOrEqual) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVSignedModulo bvSignedModulo) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVSignedRemainder bvSignedRemainder) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVSignedShiftRight bvSignedShiftRight) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVSub bvSub) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVUnsignedDiv bvUnsignedDiv) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVUnsignedGreater bvUnsignedGreater) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVUnsignedGreaterOrEqual bvUnsignedGreaterOrEqual) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVUnsignedLess bvUnsignedLess) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVUnsignedLessOrEqual bvUnsignedLessOrEqual) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVUnsignedRemainder bvUnsignedRemainder) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVUnsignedShiftRight bvUnsignedShiftRight) {
+            throw new UnsupportedOperationException();
+        }
+
     }
 
 }

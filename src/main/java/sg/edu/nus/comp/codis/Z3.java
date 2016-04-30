@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.*;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -123,6 +122,15 @@ public class Z3 implements Solver {
                 } catch (Z3Exception ex){
                     throw new RuntimeException("wrong variable type");
                 }
+            } else if (TypeInference.typeOf(variable) instanceof BVType) {
+                int size = ((BVType) TypeInference.typeOf(variable)).getSize();
+                Expr result = model.eval(ctx.mkBVConst(marshaller.toString(variable), size), true);
+                try {
+                    long value = ((BitVecNum)result).getLong();
+                    assingment.put(variable, BVConst.ofLong(value, size));
+                } catch (Z3Exception ex){
+                    throw new RuntimeException("wrong variable type");
+                }
             } else {
                 throw new UnsupportedOperationException();
             }
@@ -170,6 +178,10 @@ public class Z3 implements Solver {
             } else if (TypeInference.typeOf(variable).equals(BoolType.TYPE)) {
                 exprs.push(ctx.mkBoolConst(marshaller.toString(variable)));
                 decls.add(ctx.mkConstDecl(marshaller.toString(variable), ctx.getBoolSort()));
+            } else if (TypeInference.typeOf(variable) instanceof BVType) {
+                int size = ((BVType) TypeInference.typeOf(variable)).getSize();
+                exprs.push(ctx.mkBVConst(marshaller.toString(variable), size));
+                decls.add(ctx.mkConstDecl(marshaller.toString(variable), ctx.mkBitVecSort(size)));
             } else {
                 throw new UnsupportedOperationException();
             }
@@ -188,7 +200,7 @@ public class Z3 implements Solver {
         @Override
         public void visit(UIFApplication UIFApplication) {
             //TODO
-            throw new NotImplementedException();
+            throw new UnsupportedOperationException();
         }
 
         @Override
@@ -338,6 +350,170 @@ public class Z3 implements Solver {
         @Override
         public void visit(Selector selector) {
             processVariable(selector);
+        }
+
+        @Override
+        public void visit(BVConst bvConst) {
+            exprs.push(ctx.mkBV(bvConst.getLong(), bvConst.getType().getSize()));
+        }
+
+        @Override
+        public void visit(BVAdd bvAdd) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVAdd(left, right));
+        }
+
+        @Override
+        public void visit(BVAnd bvAnd) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVAND(left, right));
+        }
+
+        @Override
+        public void visit(BVMult bvMult) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVMul(left, right));
+        }
+
+        @Override
+        public void visit(BVNeg bvNeg) {
+            BitVecExpr arg = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVNeg(arg));
+        }
+
+        @Override
+        public void visit(BVNot bvNot) {
+            BitVecExpr arg = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVNot(arg));
+        }
+
+        @Override
+        public void visit(BVOr bvOr) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVOR(left, right));
+        }
+
+        @Override
+        public void visit(BVShiftLeft bvShiftLeft) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVSHL(left, right));
+        }
+
+        @Override
+        public void visit(BVSignedDiv bvSignedDiv) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVSDiv(left, right));
+        }
+
+        @Override
+        public void visit(BVSignedGreater bvSignedGreater) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVSGT(left, right));
+        }
+
+        @Override
+        public void visit(BVSignedGreaterOrEqual bvSignedGreaterOrEqual) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVSGE(left, right));
+        }
+
+        @Override
+        public void visit(BVSignedLess bvSignedLess) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVSLT(left, right));
+        }
+
+        @Override
+        public void visit(BVSignedLessOrEqual bvSignedLessOrEqual) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVSLE(left, right));
+        }
+
+        @Override
+        public void visit(BVSignedModulo bvSignedModulo) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVSMod(left, right));
+        }
+
+        @Override
+        public void visit(BVSignedRemainder bvSignedRemainder) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVSRem(left, right));
+        }
+
+        @Override
+        public void visit(BVSignedShiftRight bvSignedShiftRight) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVASHR(left, right));
+        }
+
+        @Override
+        public void visit(BVSub bvSub) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVSub(left, right));
+        }
+
+        @Override
+        public void visit(BVUnsignedDiv bvUnsignedDiv) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVUDiv(left, right));
+        }
+
+        @Override
+        public void visit(BVUnsignedGreater bvUnsignedGreater) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVUGT(left, right));
+        }
+
+        @Override
+        public void visit(BVUnsignedGreaterOrEqual bvUnsignedGreaterOrEqual) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVUGE(left, right));
+        }
+
+        @Override
+        public void visit(BVUnsignedLess bvUnsignedLess) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVULT(left, right));
+        }
+
+        @Override
+        public void visit(BVUnsignedLessOrEqual bvUnsignedLessOrEqual) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVULE(left, right));
+        }
+
+        @Override
+        public void visit(BVUnsignedRemainder bvUnsignedRemainder) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVURem(left, right));
+        }
+
+        @Override
+        public void visit(BVUnsignedShiftRight bvUnsignedShiftRight) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVLSHR(left, right));
         }
 
     }

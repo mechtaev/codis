@@ -31,6 +31,10 @@ public class ProgramVariable extends Variable {
         return new ProgramVariable(name, BoolType.TYPE);
     }
 
+    public static ProgramVariable mkBV(String name, int size) {
+        return new ProgramVariable(name, new BVType(size));
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (!(obj instanceof ProgramVariable))

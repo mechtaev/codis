@@ -302,6 +302,150 @@ public class Unifier {
             processLeaf(selector);
         }
 
+        @Override
+        public void visit(BVConst bvConst) {
+            if (failed) return;
+            processLeaf(bvConst);
+        }
+
+        @Override
+        public void visit(BVAdd bvAdd) {
+            if (failed) return;
+            processBinaryOp(bvAdd);
+        }
+
+        @Override
+        public void visit(BVAnd bvAnd) {
+            if (failed) return;
+            processBinaryOp(bvAnd);
+        }
+
+        @Override
+        public void visit(BVMult bvMult) {
+            if (failed) return;
+            processBinaryOp(bvMult);
+        }
+
+        @Override
+        public void visit(BVNeg bvNeg) {
+            if (failed) return;
+            processUnaryOp(bvNeg);
+        }
+
+        @Override
+        public void visit(BVNot bvNot) {
+            if (failed) return;
+            processUnaryOp(bvNot);
+        }
+
+        @Override
+        public void visit(BVOr bvOr) {
+            if (failed) return;
+            processBinaryOp(bvOr);
+        }
+
+        @Override
+        public void visit(BVShiftLeft bvShiftLeft) {
+            if (failed) return;
+            processBinaryOp(bvShiftLeft);
+        }
+
+        @Override
+        public void visit(BVSignedDiv bvSignedDiv) {
+            if (failed) return;
+            processBinaryOp(bvSignedDiv);
+        }
+
+        @Override
+        public void visit(BVSignedGreater bvSignedGreater) {
+            if (failed) return;
+            processBinaryOp(bvSignedGreater);
+        }
+
+        @Override
+        public void visit(BVSignedGreaterOrEqual bvSignedGreaterOrEqual) {
+            if (failed) return;
+            processBinaryOp(bvSignedGreaterOrEqual);
+        }
+
+        @Override
+        public void visit(BVSignedLess bvSignedLess) {
+            if (failed) return;
+            processBinaryOp(bvSignedLess);
+        }
+
+        @Override
+        public void visit(BVSignedLessOrEqual bvSignedLessOrEqual) {
+            if (failed) return;
+            processBinaryOp(bvSignedLessOrEqual);
+        }
+
+        @Override
+        public void visit(BVSignedModulo bvSignedModulo) {
+            if (failed) return;
+            processBinaryOp(bvSignedModulo);
+        }
+
+        @Override
+        public void visit(BVSignedRemainder bvSignedRemainder) {
+            if (failed) return;
+            processBinaryOp(bvSignedRemainder);
+        }
+
+        @Override
+        public void visit(BVSignedShiftRight bvSignedShiftRight) {
+            if (failed) return;
+            processBinaryOp(bvSignedShiftRight);
+        }
+
+        @Override
+        public void visit(BVSub bvSub) {
+            if (failed) return;
+            processBinaryOp(bvSub);
+        }
+
+        @Override
+        public void visit(BVUnsignedDiv bvUnsignedDiv) {
+            if (failed) return;
+            processBinaryOp(bvUnsignedDiv);
+        }
+
+        @Override
+        public void visit(BVUnsignedGreater bvUnsignedGreater) {
+            if (failed) return;
+            processBinaryOp(bvUnsignedGreater);
+        }
+
+        @Override
+        public void visit(BVUnsignedGreaterOrEqual bvUnsignedGreaterOrEqual) {
+            if (failed) return;
+            processBinaryOp(bvUnsignedGreaterOrEqual);
+        }
+
+        @Override
+        public void visit(BVUnsignedLess bvUnsignedLess) {
+            if (failed) return;
+            processBinaryOp(bvUnsignedLess);
+        }
+
+        @Override
+        public void visit(BVUnsignedLessOrEqual bvUnsignedLessOrEqual) {
+            if (failed) return;
+            processBinaryOp(bvUnsignedLessOrEqual);
+        }
+
+        @Override
+        public void visit(BVUnsignedRemainder bvUnsignedRemainder) {
+            if (failed) return;
+            processBinaryOp(bvUnsignedRemainder);
+        }
+
+        @Override
+        public void visit(BVUnsignedShiftRight bvUnsignedShiftRight) {
+            if (failed) return;
+            processBinaryOp(bvUnsignedShiftRight);
+        }
+
     }
 
 
