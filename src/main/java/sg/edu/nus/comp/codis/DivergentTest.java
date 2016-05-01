@@ -7,10 +7,7 @@ import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.Equal;
 import sg.edu.nus.comp.codis.ast.theory.Not;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 
 /**
@@ -25,30 +22,31 @@ public class DivergentTest {
     }
 
     public Optional<Triple<TestCase, Node, Node>> generate(Map<Node, Integer> componentMultiset,
-                                                           ArrayList<TestCase> testSuite) {
+                                                           List<TestCase> testSuite,
+                                                           List<ProgramVariable> inputVariables) {
         assert !testSuite.isEmpty();
 
         CBS cbs = new CBS(Z3.getInstance(), false, Optional.empty()); // integer only for now
 
-        Type outputType = TypeInference.typeOf(testSuite.get(0).getOutput());
+        Type outputType = testSuite.get(0).getOutputType();
 
         Map<ProgramVariable, Parameter> parametricAssignment = new HashMap<>();
-        for (ProgramVariable variable : testSuite.get(0).getAssignment().keySet()) {
+        for (ProgramVariable variable : inputVariables) {
             parametricAssignment.put(variable, new Parameter("<generatedInput>" + variable.getName(), variable.getType()));
         }
 
-        ArrayList<Component> components1 = cbs.flattenComponentMultiset(componentMultiset);
+        ArrayList<Component> components1 = CBS.flattenComponentMultiset(componentMultiset);
         Component result1 = new Component(new Hole("result", outputType, Node.class));
         Parameter output1 = new Parameter("<generatedOutput1>", outputType);
-        TestCase newTest1 = new TestCase(parametricAssignment, output1);
+        TestCase newTest1 = TestCase.ofAssignment(parametricAssignment, output1);
         ArrayList<TestCase> testSuite1 = new ArrayList<>(testSuite);
         testSuite1.add(newTest1);
         ArrayList<Node> clauses1 = cbs.encode(testSuite1, components1, result1);
 
-        ArrayList<Component> components2 = cbs.flattenComponentMultiset(componentMultiset);
+        ArrayList<Component> components2 = CBS.flattenComponentMultiset(componentMultiset);
         Component result2 = new Component(new Hole("result", outputType, Node.class));
         Parameter output2 = new Parameter("<generatedOutput2>", outputType);
-        TestCase newTest2 = new TestCase(parametricAssignment, output2);
+        TestCase newTest2 = TestCase.ofAssignment(parametricAssignment, output2);
         ArrayList<TestCase> testSuite2 = new ArrayList<>(testSuite);
         testSuite2.add(newTest2);
         ArrayList<Node> clauses2 = cbs.encode(testSuite2, components2, result2);
@@ -73,7 +71,7 @@ public class DivergentTest {
             newAssignment.put(variable, cbs.substituteParameters(model.get(), parametricAssignment.get(variable)));
         }
 
-        TestCase newTest = new TestCase(newAssignment, cbs.substituteParameters(model.get(), output1));
+        TestCase newTest = TestCase.ofAssignment(newAssignment, cbs.substituteParameters(model.get(), output1));
         return Optional.of(new ImmutableTriple<>(newTest, program1, program2));
     }
 }

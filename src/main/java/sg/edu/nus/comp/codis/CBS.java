@@ -45,21 +45,9 @@ public class CBS implements Synthesis {
     @Override
     public Optional<Node> synthesize(ArrayList<TestCase> testSuite, Map<Node, Integer> componentMultiset) {
         ArrayList<Component> components = flattenComponentMultiset(componentMultiset);
-        Type outputType = TypeInference.typeOf(testSuite.get(0).getOutput());
+        Type outputType = testSuite.get(0).getOutputType();
         Component result = new Component(new Hole("result", outputType, Node.class));
         ArrayList<Node> clauses = encode(testSuite, components, result);
-
-        if (logger.isInfoEnabled()) {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS");
-            Date now = new Date();
-            Path logsmt = Paths.get("cbs" + sdf.format(now) + ".smt2");
-            Path logtxt = Paths.get("cbs" + sdf.format(now) + ".txt");
-            try {
-                Files.write(logtxt, clauses.stream().map(Object::toString).collect(Collectors.toList()), Charset.forName("UTF-8"));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
 
         Optional<Map<Variable, Constant>> assignment = solver.getModel(clauses);
         if (assignment.isPresent()) {
@@ -69,7 +57,7 @@ public class CBS implements Synthesis {
         }
     }
 
-    public ArrayList<Component> flattenComponentMultiset(Map<Node, Integer> componentMultiset) {
+    public static ArrayList<Component> flattenComponentMultiset(Map<Node, Integer> componentMultiset) {
         ArrayList<Component> components = new ArrayList<>();
         for (Node node : componentMultiset.keySet()) {
             IntStream.range(0, componentMultiset.get(node)).forEach(i -> components.add(new Component(node)));
@@ -221,10 +209,9 @@ public class CBS implements Synthesis {
 
     public ArrayList<Node> testToConstraint(TestCase testCase, Component result) {
         ArrayList<Node> clauses = new ArrayList<>();
-        clauses.add(new Equal(new TestInstance(new ComponentOutput(result), testCase), testCase.getOutput()));
-        for (ProgramVariable variable : testCase.getAssignment().keySet()) {
-            Node value = instantiate(testCase.getAssignment().get(variable), testCase);
-            clauses.add(new Equal(new TestInstance(variable, testCase), instantiate(value, testCase)));
+        List<Node> testClauses = testCase.getConstraints(new ComponentOutput(result));
+        for (Node clause : testClauses) {
+            clauses.add(instantiate(clause, testCase));
         }
         return clauses;
     }

@@ -6,6 +6,7 @@ import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.*;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -45,7 +46,7 @@ public class TestZ3 {
         ArrayList<Node> assumptions = new ArrayList<>();
         assumptions.add(new Not(a));
         assumptions.add(new Not(b));
-        Either<Map<Variable, Constant>, ArrayList<Node>> unsatCore = Z3.getInstance().getModelOrCore(clauses, assumptions);
+        Either<Map<Variable, Constant>, List<Node>> unsatCore = Z3.getInstance().getModelOrCore(clauses, assumptions);
         assertTrue(unsatCore.isRight());
         assertTrue(unsatCore.right().value().contains(new Not(a)));
         assertFalse(unsatCore.right().value().contains(new Not(b)));

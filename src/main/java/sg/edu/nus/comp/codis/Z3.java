@@ -47,8 +47,8 @@ public class Z3 implements Solver {
     }
 
     @Override
-    public Either<Map<Variable, Constant>, ArrayList<Node>> getModelOrCore(ArrayList<Node> clauses,
-                                                                           ArrayList<Node> assumptions) {
+    public Either<Map<Variable, Constant>, List<Node>> getModelOrCore(List<Node> clauses,
+                                                                           List<Node> assumptions) {
 
         solver.reset();
         VariableMarshaller marshaller = new VariableMarshaller();
@@ -139,9 +139,9 @@ public class Z3 implements Solver {
     }
 
     @Override
-    public Optional<Map<Variable, Constant>> getModel(ArrayList<Node> clauses) {
+    public Optional<Map<Variable, Constant>> getModel(List<Node> clauses) {
         ArrayList<Node> assumptions = new ArrayList<>();
-        Either<Map<Variable, Constant>, ArrayList<Node>> result = getModelOrCore(clauses, assumptions);
+        Either<Map<Variable, Constant>, List<Node>> result = getModelOrCore(clauses, assumptions);
         if (result.isLeft()) {
             return Optional.of(result.left().value());
         } else {

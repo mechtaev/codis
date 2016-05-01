@@ -2,69 +2,44 @@ package sg.edu.nus.comp.codis;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import sg.edu.nus.comp.codis.ast.Constant;
-import sg.edu.nus.comp.codis.ast.Node;
-import sg.edu.nus.comp.codis.ast.ProgramVariable;
+import sg.edu.nus.comp.codis.ast.*;
+import sg.edu.nus.comp.codis.ast.theory.Equal;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
  * Created by Sergey Mechtaev on 7/4/2016.
+ *
+ * Represent constraints over inputs and output. Defines physical equality.
  */
-public class TestCase {
+public abstract class TestCase {
 
-    private Map<ProgramVariable, ? extends Node> assignment;
+    public abstract List<Node> getConstraints(Variable output);
 
-    private Node output;
+    public abstract Type getOutputType();
 
-    public TestCase(Map<ProgramVariable, ? extends Node> assignment, Node output) {
-        this.assignment = assignment;
-        this.output = output;
-    }
-
-    public Map<ProgramVariable, ? extends Node> getAssignment() {
-        return assignment;
-    }
-
-    public Node getOutput() {
-        return output;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (!(obj instanceof TestCase))
-            return false;
-        if (obj == this)
-            return true;
-
-        TestCase rhs = (TestCase) obj;
-        return new EqualsBuilder().
-                append(assignment, rhs.assignment).
-                append(output, rhs.output).
-                isEquals();
-    }
-
-    @Override
-    public int hashCode() {
-        return new HashCodeBuilder(17, 31).
-                append(assignment).
-                append(output).
-                toHashCode();
-    }
-
-    @Override
-    public String toString() {
-        String inputs = "";
-        boolean first = true;
-        for (ProgramVariable variable : assignment.keySet()) {
-            if (first) {
-                inputs += variable + "=" + assignment.get(variable);
-                first = false;
-            } else {
-                inputs += ", " + variable + "=" + assignment.get(variable);
-            }
+    public static TestCase ofAssignment(Map<ProgramVariable, ? extends Node> assignment, Node outputValue) {
+        ArrayList<Node> inputClauses = new ArrayList<>();
+        for (Map.Entry<ProgramVariable, ? extends Node> entry : assignment.entrySet()) {
+            inputClauses.add(new Equal(entry.getKey(), entry.getValue()));
         }
-        return "{ " + inputs + " -> " + output + " }";
+        return new TestCase() {
+            @Override
+            public List<Node> getConstraints(Variable output) {
+                ArrayList<Node> clauses = new ArrayList<>();
+                clauses.addAll(inputClauses);
+                clauses.add(new Equal(output, outputValue));
+                return clauses;
+            }
+
+            @Override
+            public Type getOutputType() {
+                return TypeInference.typeOf(outputValue);
+            }
+        };
+
     }
 
 }

@@ -44,12 +44,12 @@ public class TestCBS {
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(x, IntConst.of(1));
         assignment1.put(y, IntConst.of(1));
-        testSuite.add(new TestCase(assignment1, IntConst.of(1)));
+        testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(1)));
 
         Map<ProgramVariable, Node> assignment2 = new HashMap<>();
         assignment2.put(x, IntConst.of(1));
         assignment2.put(y, IntConst.of(2));
-        testSuite.add(new TestCase(assignment2, IntConst.of(1)));
+        testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(1)));
 
         Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
         assertTrue(node.isPresent());
@@ -67,12 +67,12 @@ public class TestCBS {
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(x, IntConst.of(3));
         assignment1.put(y, IntConst.of(0));
-        testSuite.add(new TestCase(assignment1, IntConst.of(3)));
+        testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(3)));
 
         Map<ProgramVariable, Node> assignment2 = new HashMap<>();
         assignment2.put(x, IntConst.of(1));
         assignment2.put(y, IntConst.of(2));
-        testSuite.add(new TestCase(assignment2, IntConst.of(3)));
+        testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(3)));
 
         Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
         assertTrue(node.isPresent());
@@ -92,12 +92,12 @@ public class TestCBS {
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(x, IntConst.of(1));
         assignment1.put(y, IntConst.of(1));
-        testSuite.add(new TestCase(assignment1, IntConst.of(2)));
+        testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(2)));
 
         Map<ProgramVariable, Node> assignment2 = new HashMap<>();
         assignment2.put(x, IntConst.of(1));
         assignment2.put(y, IntConst.of(2));
-        testSuite.add(new TestCase(assignment2, IntConst.of(3)));
+        testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(3)));
 
         Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
         assertTrue(node.isPresent());
@@ -116,17 +116,17 @@ public class TestCBS {
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(x, IntConst.of(2));
         assignment1.put(y, IntConst.of(1));
-        testSuite.add(new TestCase(assignment1, BoolConst.TRUE));
+        testSuite.add(TestCase.ofAssignment(assignment1, BoolConst.TRUE));
 
         Map<ProgramVariable, Node> assignment2 = new HashMap<>();
         assignment2.put(x, IntConst.of(1));
         assignment2.put(y, IntConst.of(2));
-        testSuite.add(new TestCase(assignment2, BoolConst.FALSE));
+        testSuite.add(TestCase.ofAssignment(assignment2, BoolConst.FALSE));
 
         Map<ProgramVariable, Node> assignment3 = new HashMap<>();
         assignment3.put(x, IntConst.of(1));
         assignment3.put(y, IntConst.of(1));
-        testSuite.add(new TestCase(assignment3, BoolConst.FALSE));
+        testSuite.add(TestCase.ofAssignment(assignment3, BoolConst.FALSE));
 
         Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
         assertTrue(node.isPresent());
@@ -147,17 +147,17 @@ public class TestCBS {
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(x, IntConst.of(3));
         assignment1.put(y, IntConst.of(2));
-        testSuite.add(new TestCase(assignment1, IntConst.of(1)));
+        testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(1)));
 
         Map<ProgramVariable, Node> assignment2 = new HashMap<>();
         assignment2.put(x, IntConst.of(2));
         assignment2.put(y, IntConst.of(3));
-        testSuite.add(new TestCase(assignment2, IntConst.of(0)));
+        testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(0)));
 
         Map<ProgramVariable, Node> assignment3 = new HashMap<>();
         assignment3.put(x, IntConst.of(1));
         assignment3.put(y, IntConst.of(1));
-        testSuite.add(new TestCase(assignment3, IntConst.of(0)));
+        testSuite.add(TestCase.ofAssignment(assignment3, IntConst.of(0)));
 
         Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
         assertTrue(node.isPresent());
@@ -173,7 +173,7 @@ public class TestCBS {
         ArrayList<TestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(x, IntConst.of(1));
-        testSuite.add(new TestCase(assignment1, IntConst.of(-1)));
+        testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(-1)));
 
         Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
         assertFalse(node.isPresent());
@@ -191,17 +191,17 @@ public class TestCBS {
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(bvX, BVConst.ofLong(2, 32));
         assignment1.put(bvY, BVConst.ofLong(1, 32));
-        testSuite.add(new TestCase(assignment1, BoolConst.TRUE));
+        testSuite.add(TestCase.ofAssignment(assignment1, BoolConst.TRUE));
 
         Map<ProgramVariable, Node> assignment2 = new HashMap<>();
         assignment2.put(bvX, BVConst.ofLong(1, 32));
         assignment2.put(bvY, BVConst.ofLong(2, 32));
-        testSuite.add(new TestCase(assignment2, BoolConst.FALSE));
+        testSuite.add(TestCase.ofAssignment(assignment2, BoolConst.FALSE));
 
         Map<ProgramVariable, Node> assignment3 = new HashMap<>();
         assignment3.put(bvX, BVConst.ofLong(1, 32));
         assignment3.put(bvY, BVConst.ofLong(1, 32));
-        testSuite.add(new TestCase(assignment3, BoolConst.FALSE));
+        testSuite.add(TestCase.ofAssignment(assignment3, BoolConst.FALSE));
 
         Optional<Node> node = bvSynthesizer.synthesize(testSuite, componentMultiset);
         assertTrue(node.isPresent());

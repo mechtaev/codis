@@ -13,13 +13,13 @@ public class CEGIS implements Synthesis {
 
     private Synthesis synthesizer;
 
-    private Evaluator evaluator;
+    private Tester tester;
 
     private Logger logger = LoggerFactory.getLogger(CEGIS.class);
 
     public CEGIS(Synthesis synthesizer, Solver solver) {
         this.synthesizer = synthesizer;
-        this.evaluator = new Evaluator(solver);
+        this.tester = new Tester(solver);
     }
 
     @Override
@@ -53,7 +53,7 @@ public class CEGIS implements Synthesis {
             boolean counterExampleFound = false;
             int score = current.size();
             for (TestCase testCase : remaining) {
-                if (!evaluator.eval(node.get(), testCase.getAssignment()).equals(testCase.getOutput())) {
+                if (!tester.isPassing(node.get(), testCase)) {
                     if (!counterExampleFound) {
                         counterExample = Optional.of(testCase);
                         counterExampleFound = true;
