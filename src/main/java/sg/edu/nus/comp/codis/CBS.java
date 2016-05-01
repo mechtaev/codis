@@ -23,7 +23,7 @@ import java.util.stream.IntStream;
  *
  * Oracle-guided Component-based Program Synthesis, ICSE'10
  */
-public class CBS implements Synthesis {
+public class CBS extends Synthesis {
 
     private Logger logger = LoggerFactory.getLogger(CBS.class);
 
@@ -43,7 +43,7 @@ public class CBS implements Synthesis {
     }
 
     @Override
-    public Optional<Node> synthesize(ArrayList<TestCase> testSuite, Map<Node, Integer> componentMultiset) {
+    public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite, Map<Node, Integer> componentMultiset) {
         ArrayList<Component> components = flattenComponentMultiset(componentMultiset);
         Type outputType = testSuite.get(0).getOutputType();
         Component result = new Component(new Hole("result", outputType, Node.class));
@@ -216,7 +216,7 @@ public class CBS implements Synthesis {
         return clauses;
     }
 
-    public ArrayList<Node> encode(ArrayList<TestCase> testSuite, ArrayList<Component> components, Component result) {
+    public ArrayList<Node> encode(List<TestCase> testSuite, ArrayList<Component> components, Component result) {
         ArrayList<Node> wfp = wellFormedness(components, result);
         ArrayList<Node> lib = library(components, result);
         ArrayList<Node> connections = connection(components, result);
@@ -234,24 +234,20 @@ public class CBS implements Synthesis {
         return clauses;
     }
 
-    public Node decode(Map<Variable, Constant> assignment, ArrayList<Component> components, Component result) {
+    public Pair<Program, Map<Parameter, Constant>> decode(Map<Variable, Constant> assignment, ArrayList<Component> components, Component result) {
         Hole resultHole = new ArrayList<>(result.getInputs()).get(0);
         Location root = new Location(new ComponentInput(result, resultHole), encodingType);
-        Node node = buildFromRoot(assignment, components, root);
-        return substituteParameters(assignment, node);
-    }
-
-    public Node substituteParameters(Map<Variable, Constant> assignment, Node node) {
         Map<Parameter, Constant> parameterValuation = new HashMap<>();
         for (Variable variable : assignment.keySet()) {
             if (variable instanceof Parameter) {
                 parameterValuation.put((Parameter) variable, assignment.get(variable));
             }
         }
-        return Traverse.substitute(node, parameterValuation);
+        Program program = buildFromRoot(assignment, components, root);
+        return new ImmutablePair<>(program, parameterValuation);
     }
 
-    private Node buildFromRoot(Map<Variable, Constant> assignment, ArrayList<Component> components, Location root) {
+    private Program buildFromRoot(Map<Variable, Constant> assignment, ArrayList<Component> components, Location root) {
         if (!assignment.containsKey(root)) {
             throw new RuntimeException("undefined location");
         }
@@ -272,10 +268,10 @@ public class CBS implements Synthesis {
             throw new RuntimeException("dangling pointer");
         }
         Component rootComponent = ((ComponentOutput)reference.get()).getComponent();
-        Map<Variable, Node> mapping = rootComponent.getInputs().stream().collect(Collectors.toMap(Function.identity(),
+        Map<Hole, Program> mapping = rootComponent.getInputs().stream().collect(Collectors.toMap(Function.identity(),
                 hole -> buildFromRoot(assignment,
                                       components,
                                       new Location(new ComponentInput(rootComponent, hole), encodingType))));
-        return Traverse.substitute(rootComponent.getSemantics(), mapping);
+        return Program.app(rootComponent, mapping);
     }
 }

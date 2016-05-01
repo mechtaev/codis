@@ -1,15 +1,19 @@
 package sg.edu.nus.comp.codis;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sg.edu.nus.comp.codis.ast.Constant;
 import sg.edu.nus.comp.codis.ast.Node;
+import sg.edu.nus.comp.codis.ast.Parameter;
+import sg.edu.nus.comp.codis.ast.Program;
 
 import java.util.*;
 
 /**
  * Created by Sergey Mechtaev on 7/4/2016.
  */
-public class CEGIS implements Synthesis {
+public class CEGIS extends Synthesis {
 
     private Synthesis synthesizer;
 
@@ -23,7 +27,8 @@ public class CEGIS implements Synthesis {
     }
 
     @Override
-    public Optional<Node> synthesize(ArrayList<TestCase> testSuite, Map<Node, Integer> componentMultiset) {
+    public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,
+                                                                        Map<Node, Integer> componentMultiset) {
         assert testSuite.size() > 0;
 
         Set<TestCase> remaining = new HashSet<>(testSuite);
@@ -31,7 +36,7 @@ public class CEGIS implements Synthesis {
 
         Optional<TestCase> counterExample = Optional.of(testSuite.get(0));
 
-        Optional<Node> node = Optional.empty();
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = Optional.empty();
 
         while(counterExample.isPresent()) {
             current.add(counterExample.get());
@@ -40,20 +45,19 @@ public class CEGIS implements Synthesis {
             remaining.remove(counterExample.get());
             counterExample = Optional.empty();
 
-            node = synthesizer.synthesize(new ArrayList<>(current), componentMultiset);
+            result = synthesizer.synthesize(new ArrayList<>(current), componentMultiset);
 
-            if (!node.isPresent()) {
+            if (!result.isPresent()) {
                 logger.info("Failed");
                 break;
             }
 
-            logger.info("Synthesized program: " + node.get());
-            logger.info("Simplified: " + Simplifier.simplify(node.get()));
+            logger.info("Synthesized program: " + result.get().getLeft().getSemantics(result.get().getRight()));
 
             boolean counterExampleFound = false;
             int score = current.size();
             for (TestCase testCase : remaining) {
-                if (!tester.isPassing(node.get(), testCase)) {
+                if (!tester.isPassing(result.get().getLeft(), result.get().getRight(), testCase)) {
                     if (!counterExampleFound) {
                         counterExample = Optional.of(testCase);
                         counterExampleFound = true;
@@ -67,6 +71,6 @@ public class CEGIS implements Synthesis {
 
         logger.info("Succeeded");
 
-        return node;
+        return result;
     }
 }

@@ -27,6 +27,7 @@ public class Traverse {
         });
     }
 
+
     public static <T> Set<T> collectByType(Node node, Class<T> type) {
         CollectVisitor visitor = new CollectVisitor(type);
         node.accept(visitor);

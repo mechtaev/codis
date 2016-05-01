@@ -2,6 +2,7 @@ package sg.edu.nus.comp.codis;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.Equal;
@@ -63,15 +64,20 @@ public class DivergentTest {
             return Optional.empty();
         }
 
-        Node program1 = cbs.decode(model.get(), components1, result1);
-        Node program2 = cbs.decode(model.get(), components2, result2);
+        Pair<Program, Map<Parameter, Constant>> p1 = cbs.decode(model.get(), components1, result1);
+        Pair<Program, Map<Parameter, Constant>> p2 = cbs.decode(model.get(), components2, result2);
+        Map<Parameter, Constant> parameterValuation = new HashMap<>();
+        parameterValuation.putAll(p1.getRight());
+        parameterValuation.putAll(p2.getRight());
 
         Map<ProgramVariable, Node> newAssignment = new HashMap<>();
         for (ProgramVariable variable : parametricAssignment.keySet()) {
-            newAssignment.put(variable, cbs.substituteParameters(model.get(), parametricAssignment.get(variable)));
+            newAssignment.put(variable, parameterValuation.get(parametricAssignment.get(variable)));
         }
 
-        TestCase newTest = TestCase.ofAssignment(newAssignment, cbs.substituteParameters(model.get(), output1));
-        return Optional.of(new ImmutableTriple<>(newTest, program1, program2));
+        TestCase newTest = TestCase.ofAssignment(newAssignment, parameterValuation.get(output1));
+        return Optional.of(new ImmutableTriple<>(newTest,
+                p1.getLeft().getSemantics(p1.getRight()),
+                p2.getLeft().getSemantics(p2.getRight())));
     }
 }

@@ -51,7 +51,7 @@ public class TestCBS {
         assignment2.put(y, IntConst.of(2));
         testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(1)));
 
-        Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
+        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, componentMultiset);
         assertTrue(node.isPresent());
         assertEquals(node.get(), x);
     }
@@ -74,9 +74,9 @@ public class TestCBS {
         assignment2.put(y, IntConst.of(2));
         testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(3)));
 
-        Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
+        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, componentMultiset);
         assertTrue(node.isPresent());
-        Optional<Node> boundNode = boundIntSynthesizer.synthesize(testSuite, componentMultiset);
+        Optional<Node> boundNode = boundIntSynthesizer.synthesizeNode(testSuite, componentMultiset);
         assertTrue(!boundNode.isPresent());
     }
 
@@ -99,7 +99,7 @@ public class TestCBS {
         assignment2.put(y, IntConst.of(2));
         testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(3)));
 
-        Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
+        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, componentMultiset);
         assertTrue(node.isPresent());
         assertTrue(node.get().equals(new Add(x, y)) || node.get().equals(new Add(y, x)));
     }
@@ -128,7 +128,7 @@ public class TestCBS {
         assignment3.put(y, IntConst.of(1));
         testSuite.add(TestCase.ofAssignment(assignment3, BoolConst.FALSE));
 
-        Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
+        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, componentMultiset);
         assertTrue(node.isPresent());
         assertEquals(node.get(), new Greater(x, y));
     }
@@ -159,7 +159,7 @@ public class TestCBS {
         assignment3.put(y, IntConst.of(1));
         testSuite.add(TestCase.ofAssignment(assignment3, IntConst.of(0)));
 
-        Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
+        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, componentMultiset);
         assertTrue(node.isPresent());
         assertEquals(node.get(), new ITE(new Greater(x, y), IntConst.of(1), IntConst.of(0)));
     }
@@ -175,7 +175,7 @@ public class TestCBS {
         assignment1.put(x, IntConst.of(1));
         testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(-1)));
 
-        Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
+        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, componentMultiset);
         assertFalse(node.isPresent());
     }
 
@@ -203,7 +203,7 @@ public class TestCBS {
         assignment3.put(bvY, BVConst.ofLong(1, 32));
         testSuite.add(TestCase.ofAssignment(assignment3, BoolConst.FALSE));
 
-        Optional<Node> node = bvSynthesizer.synthesize(testSuite, componentMultiset);
+        Optional<Node> node = bvSynthesizer.synthesizeNode(testSuite, componentMultiset);
         assertTrue(node.isPresent());
         assertEquals(node.get(), new BVUnsignedGreater(bvX, bvY));
     }

@@ -1,11 +1,10 @@
 package sg.edu.nus.comp.codis;
 
-import sg.edu.nus.comp.codis.ast.Node;
-import sg.edu.nus.comp.codis.ast.ProgramVariable;
-import sg.edu.nus.comp.codis.ast.TypeInference;
+import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.Equal;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by Sergey Mechtaev on 2/5/2016.
@@ -18,10 +17,10 @@ public class Tester {
         this.solver = solver;
     }
 
-    public boolean isPassing(Node program, TestCase test) {
+    public boolean isPassing(Program program, Map<Parameter, Constant> parameterValuation, TestCase test) {
         ProgramVariable result = new ProgramVariable("<testResult>", test.getOutputType());
         List<Node> clauses = test.getConstraints(result);
-        clauses.add(new Equal(program, result));
+        clauses.add(new Equal(program.getSemantics(), result));
         return solver.getModel(clauses).isPresent();
     }
 }

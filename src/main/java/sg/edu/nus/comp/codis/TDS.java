@@ -1,9 +1,10 @@
 package sg.edu.nus.comp.codis;
 
-import sg.edu.nus.comp.codis.ast.Component;
-import sg.edu.nus.comp.codis.ast.Node;
+import org.apache.commons.lang3.tuple.Pair;
+import sg.edu.nus.comp.codis.ast.*;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -12,10 +13,11 @@ import java.util.Optional;
  *
  * Test-Driven Synthesis, PLDI'14
  */
-public class TDS implements Synthesis {
+public class TDS extends Synthesis {
 
     @Override
-    public Optional<Node> synthesize(ArrayList<TestCase> testSuite, Map<Node, Integer> componentMultiset) {
+    public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,
+                                                                        Map<Node, Integer> componentMultiset) {
         throw new UnsupportedOperationException();
     }
 

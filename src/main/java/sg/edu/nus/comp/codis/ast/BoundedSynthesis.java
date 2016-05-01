@@ -13,7 +13,7 @@ import java.util.Optional;
 /**
  * Created by Sergey Mechtaev on 2/5/2016.
  */
-public class BoundedSynthesis implements Synthesis {
+public class BoundedSynthesis extends Synthesis {
 
     private int bound;
 
@@ -22,7 +22,8 @@ public class BoundedSynthesis implements Synthesis {
     }
 
     @Override
-    public Optional<Node> synthesize(ArrayList<TestCase> testSuite, Map<Node, Integer> componentMultiset) {
+    public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,
+                                                                        Map<Node, Integer> componentMultiset) {
         ArrayList<Component> components = CBS.flattenComponentMultiset(componentMultiset);
         return null;
     }

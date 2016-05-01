@@ -42,4 +42,14 @@ public abstract class TestCase {
 
     }
 
+    @Override
+    public String toString() {
+        String repr = "{ ";
+        for (Node clause : this.getConstraints(new ProgramVariable("output", this.getOutputType()))) {
+            repr += clause + " ";
+        }
+        repr += "}";
+        return repr;
+    }
+
 }
