@@ -538,6 +538,11 @@ public class MathSAT implements Solver {
             throw new UnsupportedOperationException();
         }
 
+        @Override
+        public void visit(BranchOutput branchOutput) {
+            throw new UnsupportedOperationException();
+        }
+
     }
 
 }

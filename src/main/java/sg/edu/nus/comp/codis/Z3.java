@@ -516,6 +516,11 @@ public class Z3 implements Solver {
             exprs.push(ctx.mkBVLSHR(left, right));
         }
 
+        @Override
+        public void visit(BranchOutput branchOutput) {
+            processVariable(branchOutput);
+        }
+
     }
 
 }

@@ -8,6 +8,7 @@ import sg.edu.nus.comp.codis.ast.Variable;
  * Created by Sergey Mechtaev on 16/4/2016.
  *
  * Selector is a boolean variable primarily used for assumptions, not test-instantiated
+ * Selectors use physical equality
  */
 public class Selector extends Variable {
     @Override

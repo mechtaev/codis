@@ -108,4 +108,6 @@ public interface BottomUpVisitor {
     void visit(BVUnsignedRemainder bvUnsignedRemainder);
 
     void visit(BVUnsignedShiftRight bvUnsignedShiftRight);
+
+    void visit(BranchOutput branchOutput);
 }

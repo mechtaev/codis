@@ -446,6 +446,12 @@ public class Unifier {
             processBinaryOp(bvUnsignedShiftRight);
         }
 
+        @Override
+        public void visit(BranchOutput branchOutput) {
+            if (failed) return;
+            processLeaf(branchOutput);
+        }
+
     }
 
 

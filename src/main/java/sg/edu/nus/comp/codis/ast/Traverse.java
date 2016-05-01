@@ -307,6 +307,11 @@ public class Traverse {
         public void visit(BVUnsignedShiftRight bvUnsignedShiftRight) {
             addIfMatches(bvUnsignedShiftRight);
         }
+
+        @Override
+        public void visit(BranchOutput branchOutput) {
+            addIfMatches(branchOutput);
+        }
     }
 
     private static class TransformationVisitor implements BottomUpVisitor {
@@ -660,6 +665,11 @@ public class Traverse {
             Node right = nodes.pop();
             Node left = nodes.pop();
             nodes.push(function.apply(new BVUnsignedShiftRight(left, right)));
+        }
+
+        @Override
+        public void visit(BranchOutput branchOutput) {
+            nodes.push(function.apply(branchOutput));
         }
 
     }

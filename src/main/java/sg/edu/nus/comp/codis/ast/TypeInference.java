@@ -586,6 +586,12 @@ public class TypeInference {
             this.types.push(type.get());
         }
 
+        @Override
+        public void visit(BranchOutput branchOutput) {
+            if (typeError) return;
+            types.push(branchOutput.getType());
+        }
+
     }
 
 }
