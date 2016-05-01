@@ -19,12 +19,14 @@ import static org.junit.Assert.assertTrue;
 public class TestCBS {
 
     private static Synthesis intSynthesizer;
+    private static Synthesis boundIntSynthesizer;
     private static Synthesis bvSynthesizer;
 
     @BeforeClass
     public static void initSolver() {
-        intSynthesizer = new CBS(Z3.getInstance(), false);
-        bvSynthesizer = new CBS(Z3.getInstance(), true);
+        intSynthesizer = new CBS(Z3.getInstance(), false, Optional.empty());
+        boundIntSynthesizer = new CBS(Z3.getInstance(), false, Optional.of(0));
+        bvSynthesizer = new CBS(Z3.getInstance(), true, Optional.empty());
     }
 
     private final ProgramVariable x = ProgramVariable.mkInt("x");
@@ -52,6 +54,30 @@ public class TestCBS {
         Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
         assertTrue(node.isPresent());
         assertEquals(node.get(), x);
+    }
+
+    @Test
+    public void testBound() {
+        Map<Node, Integer> componentMultiset = new HashMap<>();
+        componentMultiset.put(x, 1);
+        componentMultiset.put(y, 1);
+        componentMultiset.put(Components.ADD, 1);
+
+        ArrayList<TestCase> testSuite = new ArrayList<>();
+        Map<ProgramVariable, Node> assignment1 = new HashMap<>();
+        assignment1.put(x, IntConst.of(3));
+        assignment1.put(y, IntConst.of(0));
+        testSuite.add(new TestCase(assignment1, IntConst.of(3)));
+
+        Map<ProgramVariable, Node> assignment2 = new HashMap<>();
+        assignment2.put(x, IntConst.of(1));
+        assignment2.put(y, IntConst.of(2));
+        testSuite.add(new TestCase(assignment2, IntConst.of(3)));
+
+        Optional<Node> node = intSynthesizer.synthesize(testSuite, componentMultiset);
+        assertTrue(node.isPresent());
+        Optional<Node> boundNode = boundIntSynthesizer.synthesize(testSuite, componentMultiset);
+        assertTrue(!boundNode.isPresent());
     }
 
     @Test

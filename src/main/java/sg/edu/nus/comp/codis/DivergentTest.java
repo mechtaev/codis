@@ -28,7 +28,7 @@ public class DivergentTest {
                                                            ArrayList<TestCase> testSuite) {
         assert !testSuite.isEmpty();
 
-        CBS cbs = new CBS(Z3.getInstance(), false); // integer only for now
+        CBS cbs = new CBS(Z3.getInstance(), false, Optional.empty()); // integer only for now
 
         Type outputType = TypeInference.typeOf(testSuite.get(0).getOutput());
 

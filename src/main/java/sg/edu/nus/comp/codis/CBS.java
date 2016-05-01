@@ -30,14 +30,16 @@ public class CBS implements Synthesis {
     private Solver solver;
 
     private Type encodingType;
+    private Optional<Integer> sizeBound;
 
-    public CBS(Solver solver, boolean useBV32) {
+    public CBS(Solver solver, boolean useBV32, Optional<Integer> sizeBound) {
         this.solver = solver;
         if (useBV32) {
             encodingType = new BVType(32);
         } else {
             encodingType = IntType.TYPE;
         }
+        this.sizeBound = sizeBound;
     }
 
     @Override
@@ -81,6 +83,8 @@ public class CBS implements Synthesis {
      * Possible improvements:
      * 1. Forbid multiple occurrences
      * 2. Take into account hole superclass field
+     *
+     * Currently, size bound indicates maximum number of non-leaf components. It is a good definition?
      */
     public ArrayList<Node> wellFormedness(ArrayList<Component> components, Component result) {
         ArrayList<Component> variableComponents = new ArrayList<>(components);
@@ -105,9 +109,13 @@ public class CBS implements Synthesis {
                 intervalConstraints.add(insideInterval(inputLocation, inputInterval));
             }
         }
+        Pair<Integer, Integer> resultInputInterval = inputInterval;
+        if (sizeBound.isPresent()) {
+            resultInputInterval = new ImmutablePair<>(0, Math.min(components.size(), variableComponents.size() + sizeBound.get()));
+        }
         Hole resultHole = new ArrayList<>(result.getInputs()).get(0);
         Location resultInputLocation = new Location(new ComponentInput(result, resultHole), encodingType);
-        Node resultInterval = insideInterval(resultInputLocation, inputInterval);
+        Node resultInterval = insideInterval(resultInputLocation, resultInputInterval);
 
         ArrayList<Node> consistencyConstraints = new ArrayList<>();
         for (Component firstComponent : components) {
