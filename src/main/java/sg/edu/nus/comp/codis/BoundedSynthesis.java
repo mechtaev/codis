@@ -44,7 +44,9 @@ public class BoundedSynthesis extends Synthesis {
             clauses.addAll(testToConstraint(test, root));
         }
         for (List<Selector> selectors : choices.values()) {
-            clauses.add(disjunction(selectors));
+            if (!selectors.isEmpty()) {
+                clauses.add(disjunction(selectors));
+            }
         }
         Optional<Map<Variable, Constant>> assignment = solver.getModel(clauses);
         if (assignment.isPresent()) {
@@ -54,7 +56,7 @@ public class BoundedSynthesis extends Synthesis {
         }
     }
 
-    public ArrayList<Node> testToConstraint(TestCase testCase, BranchOutput output) {
+    private ArrayList<Node> testToConstraint(TestCase testCase, BranchOutput output) {
         ArrayList<Node> clauses = new ArrayList<>();
         List<Node> testClauses = testCase.getConstraints(output);
         for (Node clause : testClauses) {
@@ -84,19 +86,28 @@ public class BoundedSynthesis extends Synthesis {
         if (size > 1) {
             List<BranchOutput> lazyChildren = new ArrayList<>();
             for (Component component : functionComponents) {
+                boolean infeasibleComponent = false;
                 Set<BranchOutput> children = new HashSet<>(lazyChildren);
                 Map<Hole, Node> args = new HashMap<>();
                 for (Hole input : component.getInputs()) {
-                    Optional<BranchOutput> child = children.stream().filter(o -> o.getType().equals(component.getType())).findFirst();
+                    Optional<BranchOutput> child = children.stream().filter(o -> o.getType().equals(input.getType())).findFirst();
                     if (child.isPresent()) {
                         args.put(input, child.get());
                         children.remove(child.get());
                     } else {
-                        BranchOutput branch = new BranchOutput(component.getType());
+                        BranchOutput branch = new BranchOutput(input.getType());
+                        List<Node> childClauses = encodeBranch(branch, size - 1, components);
+                        if (childClauses.isEmpty()) {
+                            infeasibleComponent = true;
+                            break;
+                        }
+                        clauses.addAll(childClauses);
                         lazyChildren.add(branch);
-                        clauses.addAll(encodeBranch(branch, size - 1, components));
                         args.put(input, branch);
                     }
+                }
+                if (infeasibleComponent) {
+                    continue;
                 }
                 Selector selector = new Selector();
                 clauses.add(new Impl(selector, new Equal(output, Traverse.substitute(component.getSemantics(), args))));
@@ -135,7 +146,7 @@ public class BoundedSynthesis extends Synthesis {
         Map<Hole, Program> args = new HashMap<>();
         List<BranchOutput> children = new ArrayList<>(tree.get(root));
         for (Hole input : component.getInputs()) {
-            BranchOutput child = children.stream().filter(o -> o.getType().equals(component.getType())).findFirst().get();
+            BranchOutput child = children.stream().filter(o -> o.getType().equals(input.getType())).findFirst().get();
             children.remove(child);
             Pair<Program, Map<Parameter, Constant>> subresult = decode(assignment, components, child);
             parameterValuation.putAll(subresult.getRight());
