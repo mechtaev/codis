@@ -27,6 +27,10 @@ public class Component {
         return Traverse.collectByType(this.semantics, Hole.class);
     }
 
+    public boolean isLeaf() {
+        return this.getInputs().isEmpty();
+    }
+
     @Override
     public String toString() {
         return semantics.toString();

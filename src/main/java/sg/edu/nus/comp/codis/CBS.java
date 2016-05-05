@@ -76,9 +76,9 @@ public class CBS extends Synthesis {
      */
     public ArrayList<Node> wellFormedness(ArrayList<Component> components, Component result) {
         ArrayList<Component> variableComponents = new ArrayList<>(components);
-        variableComponents.removeIf(c -> !(c.getSemantics() instanceof Variable || c.getSemantics() instanceof Constant));
+        variableComponents.removeIf(c -> !(c.isLeaf()));
         ArrayList<Component> functionComponents = new ArrayList<>(components);
-        functionComponents.removeIf(c -> c.getSemantics() instanceof Variable || c.getSemantics() instanceof Constant);
+        functionComponents.removeIf(Component::isLeaf);
 
         Pair<Integer, Integer> variableOutputInterval = new ImmutablePair<>(0, variableComponents.size());
         Pair<Integer, Integer> functionOutputInterval = new ImmutablePair<>(variableComponents.size(), components.size());
