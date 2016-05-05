@@ -1,5 +1,6 @@
 package sg.edu.nus.comp.codis;
 
+import com.google.common.collect.Multiset;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Pair;
@@ -9,6 +10,7 @@ import sg.edu.nus.comp.codis.ast.theory.Equal;
 import sg.edu.nus.comp.codis.ast.theory.Not;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 /**
@@ -22,7 +24,7 @@ public class DivergentTest {
         this.solver = solver;
     }
 
-    public Optional<Triple<TestCase, Node, Node>> generate(Map<Node, Integer> componentMultiset,
+    public Optional<Triple<TestCase, Node, Node>> generate(Multiset<Node> components,
                                                            List<TestCase> testSuite,
                                                            List<ProgramVariable> inputVariables) {
         assert !testSuite.isEmpty();
@@ -36,23 +38,23 @@ public class DivergentTest {
             parametricAssignment.put(variable, new Parameter("<generatedInput>" + variable.getName(), variable.getType()));
         }
 
-        ArrayList<Component> components1 = CBS.flattenComponentMultiset(componentMultiset);
+        List<Component> flattenedComponents1 = components.stream().map(Component::new).collect(Collectors.toList());;
         Component result1 = new Component(new Hole("result", outputType, Node.class));
         Parameter output1 = new Parameter("<generatedOutput1>", outputType);
         TestCase newTest1 = TestCase.ofAssignment(parametricAssignment, output1);
-        ArrayList<TestCase> testSuite1 = new ArrayList<>(testSuite);
+        List<TestCase> testSuite1 = new ArrayList<>(testSuite);
         testSuite1.add(newTest1);
-        ArrayList<Node> clauses1 = cbs.encode(testSuite1, components1, result1);
+        List<Node> clauses1 = cbs.encode(testSuite1, flattenedComponents1, result1);
 
-        ArrayList<Component> components2 = CBS.flattenComponentMultiset(componentMultiset);
+        List<Component> flattenedComponents2 = components.stream().map(Component::new).collect(Collectors.toList());
         Component result2 = new Component(new Hole("result", outputType, Node.class));
         Parameter output2 = new Parameter("<generatedOutput2>", outputType);
         TestCase newTest2 = TestCase.ofAssignment(parametricAssignment, output2);
-        ArrayList<TestCase> testSuite2 = new ArrayList<>(testSuite);
+        List<TestCase> testSuite2 = new ArrayList<>(testSuite);
         testSuite2.add(newTest2);
-        ArrayList<Node> clauses2 = cbs.encode(testSuite2, components2, result2);
+        List<Node> clauses2 = cbs.encode(testSuite2, flattenedComponents2, result2);
 
-        ArrayList<Node> clauses = new ArrayList<>();
+        List<Node> clauses = new ArrayList<>();
 
         clauses.addAll(clauses1);
         clauses.addAll(clauses2);
@@ -64,8 +66,8 @@ public class DivergentTest {
             return Optional.empty();
         }
 
-        Pair<Program, Map<Parameter, Constant>> p1 = cbs.decode(model.get(), components1, result1);
-        Pair<Program, Map<Parameter, Constant>> p2 = cbs.decode(model.get(), components2, result2);
+        Pair<Program, Map<Parameter, Constant>> p1 = cbs.decode(model.get(), flattenedComponents1, result1);
+        Pair<Program, Map<Parameter, Constant>> p2 = cbs.decode(model.get(), flattenedComponents2, result2);
         Map<Parameter, Constant> parameterValuation = new HashMap<>();
         parameterValuation.putAll(p1.getRight());
         parameterValuation.putAll(p2.getRight());

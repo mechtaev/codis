@@ -1,5 +1,6 @@
 package sg.edu.nus.comp.codis;
 
+import com.google.common.collect.Multiset;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import sg.edu.nus.comp.codis.ast.*;
@@ -9,6 +10,7 @@ import sg.edu.nus.comp.codis.ast.theory.Impl;
 import sg.edu.nus.comp.codis.ast.theory.Or;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Created by Sergey Mechtaev on 2/5/2016.
@@ -28,14 +30,14 @@ public class BoundedSynthesis extends Synthesis {
 
     @Override
     public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,
-                                                                        Map<Node, Integer> componentMultiset) {
+                                                                        Multiset<Node> components) {
         tree = new HashMap<>();
         selected = new HashMap<>();
         choices = new HashMap<>();
 
-        ArrayList<Component> components = CBS.flattenComponentMultiset(componentMultiset);
+        List<Component> flattenedComponents = components.stream().map(Component::new).collect(Collectors.toList());
         BranchOutput root = new BranchOutput(testSuite.get(0).getOutputType());
-        List<Node> branchClauses = encodeBranch(root, bound, components);
+        List<Node> branchClauses = encodeBranch(root, bound, flattenedComponents);
         List<Node> clauses = new ArrayList<>();
         for (TestCase test : testSuite) {
             for (Node node : branchClauses) {
@@ -50,14 +52,14 @@ public class BoundedSynthesis extends Synthesis {
         }
         Optional<Map<Variable, Constant>> assignment = solver.getModel(clauses);
         if (assignment.isPresent()) {
-            return Optional.of(decode(assignment.get(), components, root));
+            return Optional.of(decode(assignment.get(), flattenedComponents, root));
         } else {
             return Optional.empty();
         }
     }
 
-    private ArrayList<Node> testToConstraint(TestCase testCase, BranchOutput output) {
-        ArrayList<Node> clauses = new ArrayList<>();
+    private List<Node> testToConstraint(TestCase testCase, BranchOutput output) {
+        List<Node> clauses = new ArrayList<>();
         List<Node> testClauses = testCase.getConstraints(output);
         for (Node clause : testClauses) {
             clauses.add(instantiate(clause, testCase));
@@ -70,11 +72,11 @@ public class BoundedSynthesis extends Synthesis {
         choices.put(output, new ArrayList<>());
 
         List<Node> clauses = new ArrayList<>();
-        ArrayList<Component> relevantComponents = new ArrayList<>(components);
+        List<Component> relevantComponents = new ArrayList<>(components);
         relevantComponents.removeIf(c -> !TypeInference.typeOf(c).equals(output.getType()));
-        ArrayList<Component> leafComponents = new ArrayList<>(relevantComponents);
+        List<Component> leafComponents = new ArrayList<>(relevantComponents);
         leafComponents.removeIf(c -> !(c.isLeaf()));
-        ArrayList<Component> functionComponents = new ArrayList<>(relevantComponents);
+        List<Component> functionComponents = new ArrayList<>(relevantComponents);
         functionComponents.removeIf(Component::isLeaf);
 
         for (Component component : leafComponents) {
@@ -128,7 +130,7 @@ public class BoundedSynthesis extends Synthesis {
     }
 
     private Pair<Program, Map<Parameter, Constant>> decode(Map<Variable, Constant> assignment,
-                                                           ArrayList<Component> components,
+                                                           List<Component> components,
                                                            BranchOutput root) {
         List<Selector> nodeChoices = choices.get(root);
         Selector choice = nodeChoices.stream().filter(s -> assignment.get(s).equals(BoolConst.TRUE)).findFirst().get();

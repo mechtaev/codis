@@ -1,5 +1,6 @@
 package sg.edu.nus.comp.codis;
 
+import com.google.common.collect.Multiset;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +29,7 @@ public class CEGIS extends Synthesis {
 
     @Override
     public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,
-                                                                        Map<Node, Integer> componentMultiset) {
+                                                                        Multiset<Node> components) {
         assert testSuite.size() > 0;
 
         Set<TestCase> remaining = new HashSet<>(testSuite);
@@ -45,7 +46,7 @@ public class CEGIS extends Synthesis {
             remaining.remove(counterExample.get());
             counterExample = Optional.empty();
 
-            result = synthesizer.synthesize(new ArrayList<>(current), componentMultiset);
+            result = synthesizer.synthesize(new ArrayList<>(current), components);
 
             if (!result.isPresent()) {
                 logger.info("Failed");

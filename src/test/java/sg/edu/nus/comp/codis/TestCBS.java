@@ -1,5 +1,7 @@
 package sg.edu.nus.comp.codis;
 
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Multiset;
 import org.junit.*;
 import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.*;
@@ -36,9 +38,9 @@ public class TestCBS {
 
     @Test
     public void testVariableChoice() {
-        Map<Node, Integer> componentMultiset = new HashMap<>();
-        componentMultiset.put(x, 1);
-        componentMultiset.put(y, 1);
+        Multiset<Node> components = HashMultiset.create();
+        components.add(x);
+        components.add(y);
 
         ArrayList<TestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
@@ -51,17 +53,17 @@ public class TestCBS {
         assignment2.put(y, IntConst.of(2));
         testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(1)));
 
-        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, componentMultiset);
+        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, components);
         assertTrue(node.isPresent());
         assertEquals(node.get(), x);
     }
 
     @Test
     public void testBound() {
-        Map<Node, Integer> componentMultiset = new HashMap<>();
-        componentMultiset.put(x, 1);
-        componentMultiset.put(y, 1);
-        componentMultiset.put(Components.ADD, 1);
+        Multiset<Node> components = HashMultiset.create();
+        components.add(x);
+        components.add(y);
+        components.add(Components.ADD);
 
         ArrayList<TestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
@@ -74,19 +76,19 @@ public class TestCBS {
         assignment2.put(y, IntConst.of(2));
         testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(3)));
 
-        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, componentMultiset);
+        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, components);
         assertTrue(node.isPresent());
-        Optional<Node> boundNode = boundIntSynthesizer.synthesizeNode(testSuite, componentMultiset);
+        Optional<Node> boundNode = boundIntSynthesizer.synthesizeNode(testSuite, components);
         assertTrue(!boundNode.isPresent());
     }
 
     @Test
     public void testArithmetic() {
-        Map<Node, Integer> componentMultiset = new HashMap<>();
-        componentMultiset.put(x, 1);
-        componentMultiset.put(y, 1);
-        componentMultiset.put(Components.ADD, 1);
-        componentMultiset.put(Components.SUB, 1);
+        Multiset<Node> components = HashMultiset.create();
+        components.add(x);
+        components.add(y);
+        components.add(Components.ADD);
+        components.add(Components.SUB);
 
         ArrayList<TestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
@@ -99,18 +101,18 @@ public class TestCBS {
         assignment2.put(y, IntConst.of(2));
         testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(3)));
 
-        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, componentMultiset);
+        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, components);
         assertTrue(node.isPresent());
         assertTrue(node.get().equals(new Add(x, y)) || node.get().equals(new Add(y, x)));
     }
 
     @Test
     public void testArithmeticAndLogic() {
-        Map<Node, Integer> componentMultiset = new HashMap<>();
-        componentMultiset.put(x, 1);
-        componentMultiset.put(y, 1);
-        componentMultiset.put(Components.GT, 1);
-        componentMultiset.put(Components.GE, 1);
+        Multiset<Node> components = HashMultiset.create();
+        components.add(x);
+        components.add(y);
+        components.add(Components.GT);
+        components.add(Components.GE);
 
         ArrayList<TestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
@@ -128,20 +130,20 @@ public class TestCBS {
         assignment3.put(y, IntConst.of(1));
         testSuite.add(TestCase.ofAssignment(assignment3, BoolConst.FALSE));
 
-        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, componentMultiset);
+        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, components);
         assertTrue(node.isPresent());
         assertEquals(node.get(), new Greater(x, y));
     }
 
     @Test
     public void testITE() {
-        Map<Node, Integer> componentMultiset = new HashMap<>();
-        componentMultiset.put(x, 1);
-        componentMultiset.put(y, 1);
-        componentMultiset.put(IntConst.of(0), 1);
-        componentMultiset.put(IntConst.of(1), 1);
-        componentMultiset.put(Components.GT, 1);
-        componentMultiset.put(Components.ITE, 1);
+        Multiset<Node> components = HashMultiset.create();
+        components.add(x);
+        components.add(y);
+        components.add(IntConst.of(0));
+        components.add(IntConst.of(1));
+        components.add(Components.GT);
+        components.add(Components.ITE);
 
         ArrayList<TestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
@@ -159,33 +161,33 @@ public class TestCBS {
         assignment3.put(y, IntConst.of(1));
         testSuite.add(TestCase.ofAssignment(assignment3, IntConst.of(0)));
 
-        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, componentMultiset);
+        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, components);
         assertTrue(node.isPresent());
         assertEquals(node.get(), new ITE(new Greater(x, y), IntConst.of(1), IntConst.of(0)));
     }
 
     @Test
     public void testTypeRestrictions() {
-        Map<Node, Integer> componentMultiset = new HashMap<>();
-        componentMultiset.put(x, 1);
-        componentMultiset.put(new Minus(new Hole("a", IntType.TYPE, Constant.class)), 1);
+        Multiset<Node> components = HashMultiset.create();
+        components.add(x);
+        components.add(new Minus(new Hole("a", IntType.TYPE, Constant.class)));
 
         ArrayList<TestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(x, IntConst.of(1));
         testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(-1)));
 
-        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, componentMultiset);
+        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, components);
         assertFalse(node.isPresent());
     }
 
     @Test
     public void testBVArithmeticAndLogic() {
-        Map<Node, Integer> componentMultiset = new HashMap<>();
-        componentMultiset.put(bvX, 1);
-        componentMultiset.put(bvY, 1);
-        componentMultiset.put(Components.BVUGT, 1);
-        componentMultiset.put(Components.BVUGE, 1);
+        Multiset<Node> components = HashMultiset.create();
+        components.add(bvX);
+        components.add(bvY);
+        components.add(Components.BVUGT);
+        components.add(Components.BVUGE);
 
         ArrayList<TestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
@@ -203,7 +205,7 @@ public class TestCBS {
         assignment3.put(bvY, BVConst.ofLong(1, 32));
         testSuite.add(TestCase.ofAssignment(assignment3, BoolConst.FALSE));
 
-        Optional<Node> node = bvSynthesizer.synthesizeNode(testSuite, componentMultiset);
+        Optional<Node> node = bvSynthesizer.synthesizeNode(testSuite, components);
         assertTrue(node.isPresent());
         assertEquals(node.get(), new BVUnsignedGreater(bvX, bvY));
     }

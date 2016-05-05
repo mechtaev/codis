@@ -1,5 +1,6 @@
 package sg.edu.nus.comp.codis;
 
+import com.google.common.collect.Multiset;
 import org.apache.commons.lang3.tuple.Pair;
 import sg.edu.nus.comp.codis.ast.*;
 
@@ -13,11 +14,11 @@ import java.util.Optional;
 public abstract class Synthesis {
 
     public abstract Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,
-                                                                                 Map<Node, Integer> componentMultiset);
+                                                                                 Multiset<Node> components);
 
     public Optional<Node> synthesizeNode(List<TestCase> testSuite,
-                                         Map<Node, Integer> componentMultiset) {
-        Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesize(testSuite, componentMultiset);
+                                         Multiset<Node> components) {
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesize(testSuite, components);
         if (!result.isPresent())
             return Optional.empty();
 

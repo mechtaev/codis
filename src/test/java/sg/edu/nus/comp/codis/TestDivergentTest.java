@@ -1,5 +1,7 @@
 package sg.edu.nus.comp.codis;
 
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Multiset;
 import org.apache.commons.lang3.tuple.Triple;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -31,11 +33,11 @@ public class TestDivergentTest {
 
     @Test
     public void testInequalities() {
-        Map<Node, Integer> componentMultiset = new HashMap<>();
-        componentMultiset.put(x, 1);
-        componentMultiset.put(y, 1);
-        componentMultiset.put(Components.GT, 1);
-        componentMultiset.put(Components.GE, 1);
+        Multiset<Node> components = HashMultiset.create();
+        components.add(x);
+        components.add(y);
+        components.add(Components.GT);
+        components.add(Components.GE);
 
         ArrayList<TestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
@@ -48,7 +50,7 @@ public class TestDivergentTest {
         assignment2.put(y, IntConst.of(1));
         testSuite.add(TestCase.ofAssignment(assignment2, BoolConst.TRUE));
 
-        Optional<Triple<TestCase, Node, Node>> result = generator.generate(componentMultiset, testSuite, Arrays.asList(x, y));
+        Optional<Triple<TestCase, Node, Node>> result = generator.generate(components, testSuite, Arrays.asList(x, y));
 
         assertTrue(result.isPresent());
         Selector dummy = new Selector();

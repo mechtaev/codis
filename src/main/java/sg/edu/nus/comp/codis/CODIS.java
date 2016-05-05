@@ -1,5 +1,6 @@
 package sg.edu.nus.comp.codis;
 
+import com.google.common.collect.Multiset;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import org.slf4j.Logger;
@@ -16,11 +17,11 @@ public class CODIS extends Synthesis {
     private Logger logger = LoggerFactory.getLogger(CEGIS.class);
 
     // list of (program, last fixed, change)
-    private ArrayList<Triple<Node, TestCase, Map<Integer, Node>>> path;
+    private List<Triple<Node, TestCase, Map<Integer, Node>>> path;
 
     @Override
     public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,
-                                                                        Map<Node, Integer> componentMultiset) {
+                                                                        Multiset<Node> components) {
         throw new UnsupportedOperationException();
     }
 

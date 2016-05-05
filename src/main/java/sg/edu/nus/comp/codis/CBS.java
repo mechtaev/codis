@@ -1,5 +1,6 @@
 package sg.edu.nus.comp.codis;
 
+import com.google.common.collect.Multiset;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
@@ -37,26 +38,18 @@ public class CBS extends Synthesis {
     }
 
     @Override
-    public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite, Map<Node, Integer> componentMultiset) {
-        ArrayList<Component> components = flattenComponentMultiset(componentMultiset);
+    public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite, Multiset<Node> components) {
+        List<Component> flattenedComponents = components.stream().map(Component::new).collect(Collectors.toList());
         Type outputType = testSuite.get(0).getOutputType();
         Component result = new Component(new Hole("result", outputType, Node.class));
-        ArrayList<Node> clauses = encode(testSuite, components, result);
+        List<Node> clauses = encode(testSuite, flattenedComponents, result);
 
         Optional<Map<Variable, Constant>> assignment = solver.getModel(clauses);
         if (assignment.isPresent()) {
-            return Optional.of(decode(assignment.get(), components, result));
+            return Optional.of(decode(assignment.get(), flattenedComponents, result));
         } else {
             return Optional.empty();
         }
-    }
-
-    public static ArrayList<Component> flattenComponentMultiset(Map<Node, Integer> componentMultiset) {
-        ArrayList<Component> components = new ArrayList<>();
-        for (Node node : componentMultiset.keySet()) {
-            IntStream.range(0, componentMultiset.get(node)).forEach(i -> components.add(new Component(node)));
-        }
-        return components;
     }
 
     /**
@@ -68,17 +61,17 @@ public class CBS extends Synthesis {
      *
      * Currently, size bound indicates maximum number of non-leaf components. It is a good definition?
      */
-    public ArrayList<Node> wellFormedness(ArrayList<Component> components, Component result) {
-        ArrayList<Component> variableComponents = new ArrayList<>(components);
+    public List<Node> wellFormedness(List<Component> components, Component result) {
+        List<Component> variableComponents = new ArrayList<>(components);
         variableComponents.removeIf(c -> !(c.isLeaf()));
-        ArrayList<Component> functionComponents = new ArrayList<>(components);
+        List<Component> functionComponents = new ArrayList<>(components);
         functionComponents.removeIf(Component::isLeaf);
 
         Pair<Integer, Integer> variableOutputInterval = new ImmutablePair<>(0, variableComponents.size());
         Pair<Integer, Integer> functionOutputInterval = new ImmutablePair<>(variableComponents.size(), components.size());
         Pair<Integer, Integer> inputInterval = new ImmutablePair<>(0, components.size());
 
-        ArrayList<Node> intervalConstraints = new ArrayList<>();
+        List<Node> intervalConstraints = new ArrayList<>();
         for (Component component : components) {
             Location outputLocation = new Location(new ComponentOutput(component), encodingType);
             if (component.getSemantics() instanceof Variable || component.getSemantics() instanceof Constant) {
@@ -99,7 +92,7 @@ public class CBS extends Synthesis {
         Location resultInputLocation = new Location(new ComponentInput(result, resultHole), encodingType);
         Node resultInterval = insideInterval(resultInputLocation, resultInputInterval);
 
-        ArrayList<Node> consistencyConstraints = new ArrayList<>();
+        List<Node> consistencyConstraints = new ArrayList<>();
         for (Component firstComponent : components) {
             for (Component secondComponent : components) {
                 if (!firstComponent.equals(secondComponent)) {
@@ -110,7 +103,7 @@ public class CBS extends Synthesis {
             }
         }
 
-        ArrayList<Node> acyclicityConstraints = new ArrayList<>();
+        List<Node> acyclicityConstraints = new ArrayList<>();
         for (Component component : components) {
             Location outputLocation = new Location(new ComponentOutput(component), encodingType);
             for (Hole hole : component.getInputs()) {
@@ -123,7 +116,7 @@ public class CBS extends Synthesis {
             }
         }
 
-        ArrayList<Node> clauses = new ArrayList<>();
+        List<Node> clauses = new ArrayList<>();
         clauses.addAll(intervalConstraints);
         clauses.add(resultInterval);
         clauses.addAll(consistencyConstraints);
@@ -144,8 +137,8 @@ public class CBS extends Synthesis {
         }
     }
 
-    public ArrayList<Node> library(ArrayList<Component> components, Component result) {
-        ArrayList<Node> libraryConstraints = new ArrayList<>();
+    public List<Node> library(List<Component> components, Component result) {
+        List<Node> libraryConstraints = new ArrayList<>();
         for (Component component : components) {
             ComponentOutput output = new ComponentOutput(component);
             Map<Hole, ComponentInput> inputMapping =
@@ -160,7 +153,7 @@ public class CBS extends Synthesis {
         return libraryConstraints;
     }
 
-    public ArrayList<Node> connection(ArrayList<Component> components, Component result) {
+    public List<Node> connection(List<Component> components, Component result) {
         Set<ComponentOutput> outputs = new HashSet<>();
         Set<ComponentInput> inputs = new HashSet<>();
         for (Component component : components) {
@@ -172,7 +165,7 @@ public class CBS extends Synthesis {
 
         Hole resultHole = new ArrayList<>(result.getInputs()).get(0);
         inputs.add(new ComponentInput(result, resultHole));
-        ArrayList<Node> clauses = new ArrayList<>();
+        List<Node> clauses = new ArrayList<>();
 
         for (ComponentOutput co : outputs) {
             for (ComponentInput ci : inputs) {
@@ -201,8 +194,8 @@ public class CBS extends Synthesis {
         });
     }
 
-    public ArrayList<Node> testToConstraint(TestCase testCase, Component result) {
-        ArrayList<Node> clauses = new ArrayList<>();
+    public List<Node> testToConstraint(TestCase testCase, Component result) {
+        List<Node> clauses = new ArrayList<>();
         List<Node> testClauses = testCase.getConstraints(new ComponentOutput(result));
         for (Node clause : testClauses) {
             clauses.add(instantiate(clause, testCase));
@@ -210,11 +203,11 @@ public class CBS extends Synthesis {
         return clauses;
     }
 
-    public ArrayList<Node> encode(List<TestCase> testSuite, ArrayList<Component> components, Component result) {
-        ArrayList<Node> wfp = wellFormedness(components, result);
-        ArrayList<Node> lib = library(components, result);
-        ArrayList<Node> connections = connection(components, result);
-        ArrayList<Node> clauses = new ArrayList<>();
+    public List<Node> encode(List<TestCase> testSuite, List<Component> components, Component result) {
+        List<Node> wfp = wellFormedness(components, result);
+        List<Node> lib = library(components, result);
+        List<Node> connections = connection(components, result);
+        List<Node> clauses = new ArrayList<>();
         clauses.addAll(wfp);
         for (TestCase test : testSuite) {
             for (Node node : lib) {
@@ -228,7 +221,7 @@ public class CBS extends Synthesis {
         return clauses;
     }
 
-    public Pair<Program, Map<Parameter, Constant>> decode(Map<Variable, Constant> assignment, ArrayList<Component> components, Component result) {
+    public Pair<Program, Map<Parameter, Constant>> decode(Map<Variable, Constant> assignment, List<Component> components, Component result) {
         Hole resultHole = new ArrayList<>(result.getInputs()).get(0);
         Location root = new Location(new ComponentInput(result, resultHole), encodingType);
         Map<Parameter, Constant> parameterValuation = new HashMap<>();
@@ -241,7 +234,7 @@ public class CBS extends Synthesis {
         return new ImmutablePair<>(program, parameterValuation);
     }
 
-    private Program buildFromRoot(Map<Variable, Constant> assignment, ArrayList<Component> components, Location root) {
+    private Program buildFromRoot(Map<Variable, Constant> assignment, List<Component> components, Location root) {
         if (!assignment.containsKey(root)) {
             throw new RuntimeException("undefined location");
         }

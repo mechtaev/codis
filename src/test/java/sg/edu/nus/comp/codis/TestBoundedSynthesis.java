@@ -1,5 +1,8 @@
 package sg.edu.nus.comp.codis;
 
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Multiset;
+import com.google.common.collect.TreeMultiset;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import sg.edu.nus.comp.codis.ast.Node;
@@ -31,10 +34,10 @@ public class TestBoundedSynthesis {
 
     @Test
     public void testVariableChoice() {
-        Map<Node, Integer> componentMultiset = new HashMap<>();
-        componentMultiset.put(x, 1);
-        componentMultiset.put(y, 1);
-        componentMultiset.put(Components.ADD, 1);
+        Multiset<Node> components = HashMultiset.create();
+        components.add(x);
+        components.add(y);
+        components.add(Components.ADD);
 
         ArrayList<TestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
@@ -47,7 +50,7 @@ public class TestBoundedSynthesis {
         assignment2.put(y, IntConst.of(2));
         testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(3)));
 
-        Optional<Node> node = synthesizer2.synthesizeNode(testSuite, componentMultiset);
+        Optional<Node> node = synthesizer2.synthesizeNode(testSuite, components);
         assertTrue(node.isPresent());
         assertTrue(node.get().equals(new Add(x, y)) || node.get().equals(new Add(y, x)));
     }

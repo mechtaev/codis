@@ -1,5 +1,6 @@
 package sg.edu.nus.comp.codis;
 
+import com.google.common.collect.Multiset;
 import org.apache.commons.lang3.tuple.Pair;
 import sg.edu.nus.comp.codis.ast.*;
 
@@ -17,7 +18,7 @@ public class TDS extends Synthesis {
 
     @Override
     public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,
-                                                                        Map<Node, Integer> componentMultiset) {
+                                                                        Multiset<Node> components) {
         throw new UnsupportedOperationException();
     }
 
