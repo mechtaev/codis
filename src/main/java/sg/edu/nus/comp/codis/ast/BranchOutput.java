@@ -15,6 +15,8 @@ public class BranchOutput extends Variable {
 
     public BranchOutput(Type type) {
         this.type = type;
+        objectCounter = classCounter;
+        classCounter++;
     }
 
     @Override
@@ -26,4 +28,13 @@ public class BranchOutput extends Variable {
     public void accept(TopDownVisitor visitor) {
         visitor.visit(this);
     }
+
+    private static int classCounter = 0;
+    private int objectCounter;
+
+    @Override
+    public String toString() {
+        return "Branch" + objectCounter;
+    }
+
 }

@@ -11,6 +11,7 @@ import sg.edu.nus.comp.codis.ast.Variable;
  * Selectors use physical equality
  */
 public class Selector extends Variable {
+
     @Override
     public void accept(BottomUpVisitor visitor) {
         visitor.visit(this);
@@ -19,5 +20,18 @@ public class Selector extends Variable {
     @Override
     public void accept(TopDownVisitor visitor) {
         visitor.visit(this);
+    }
+
+    private static int classCounter = 0;
+    private int objectCounter;
+
+    public Selector() {
+        objectCounter = classCounter;
+        classCounter++;
+    }
+
+    @Override
+    public String toString() {
+        return "Selector" + objectCounter;
     }
 }

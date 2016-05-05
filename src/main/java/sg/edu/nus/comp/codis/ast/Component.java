@@ -31,6 +31,10 @@ public class Component {
         return this.getInputs().isEmpty();
     }
 
+    public Type getType() {
+        return TypeInference.typeOf(semantics);
+    }
+
     @Override
     public String toString() {
         return semantics.toString();
