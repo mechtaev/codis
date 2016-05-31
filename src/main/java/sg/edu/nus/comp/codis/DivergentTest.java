@@ -38,7 +38,7 @@ public class DivergentTest {
             parametricAssignment.put(variable, new Parameter("<generatedInput>" + variable.getName(), variable.getType()));
         }
 
-        List<Component> flattenedComponents1 = components.stream().map(Component::new).collect(Collectors.toList());;
+        List<Component> flattenedComponents1 = components.stream().map(Component::new).collect(Collectors.toList());
         Component result1 = new Component(new Hole("result", outputType, Node.class));
         Parameter output1 = new Parameter("<generatedOutput1>", outputType);
         TestCase newTest1 = TestCase.ofAssignment(parametricAssignment, output1);

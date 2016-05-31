@@ -50,7 +50,7 @@ public class CEGIS extends Synthesis {
 
             if (!result.isPresent()) {
                 logger.info("Failed");
-                break;
+                return result;
             }
 
             logger.info("Synthesized program: " + result.get().getLeft().getSemantics(result.get().getRight()));

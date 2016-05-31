@@ -16,8 +16,12 @@ public class CODIS extends Synthesis {
 
     private Logger logger = LoggerFactory.getLogger(CEGIS.class);
 
-    // list of (program, last fixed, change)
     private List<Triple<Node, TestCase, Map<Integer, Node>>> path;
+    private Synthesis synthesizer;
+
+    public CODIS(Synthesis synthesizer) {
+        this.synthesizer = synthesizer;
+    }
 
     @Override
     public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,

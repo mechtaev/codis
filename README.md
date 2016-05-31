@@ -12,4 +12,12 @@ CODIS is an inductive program synthesizer.
                                  -DartifactId=z3 \
                                  -Dversion=4 \
                                  -Dpackaging=jar
-3. Execute `mvn package`.
+3. Compile MathSAT with Java support.
+4. Install `mathsat.api` to Maven:
+
+        mvn install:install-file -Dfile=/path/to/mathsat.jar \
+                                 -DgroupId=mathsat.api \
+                                 -DartifactId=mathsat \
+                                 -Dversion=5 \
+                                 -Dpackaging=jar
+5. Execute `mvn package`.

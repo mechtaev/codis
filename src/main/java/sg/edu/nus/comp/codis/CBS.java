@@ -58,6 +58,7 @@ public class CBS extends Synthesis {
      * Possible improvements:
      * 1. Forbid multiple occurrences
      * 2. Take into account hole superclass field
+     * 3. Why not to fix the root output location? Maybe it will be more efficient
      *
      * Currently, size bound indicates maximum number of non-leaf components. It is a good definition?
      */
