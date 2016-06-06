@@ -12,7 +12,16 @@ import java.util.stream.Collectors;
 public class Program {
 
     private Component root;
+
+    public Component getRoot() {
+        return root;
+    }
+
     private Map<Hole, Program> children;
+
+    public Map<Hole, Program> getChildren() {
+        return children;
+    }
 
     private Program(Component root, Map<Hole, Program> children) {
         this.root = root;

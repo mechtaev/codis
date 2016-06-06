@@ -2,16 +2,18 @@ package sg.edu.nus.comp.codis.ast.theory;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import sg.edu.nus.comp.codis.ast.Application;
 import sg.edu.nus.comp.codis.ast.BottomUpVisitor;
 import sg.edu.nus.comp.codis.ast.Node;
 import sg.edu.nus.comp.codis.ast.TopDownVisitor;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by Sergey Mechtaev on 15/4/2016.
  */
-public class ITE implements Node {
+public class ITE extends Application {
 
     private Node condition;
     private Node thenBranch;
@@ -80,4 +82,12 @@ public class ITE implements Node {
         return "(if " + condition.toString() + " " + thenBranch.toString() + " " + elseBranch.toString() + ")";
     }
 
+    @Override
+    public List<Node> getArgs() {
+        List<Node> result = new ArrayList<>();
+        result.add(condition);
+        result.add(thenBranch);
+        result.add(elseBranch);
+        return result;
+    }
 }
