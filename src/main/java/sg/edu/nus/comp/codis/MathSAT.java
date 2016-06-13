@@ -270,7 +270,7 @@ public class MathSAT implements Solver {
             int[] groupsOfA = {groupA};
             long interpolant = mathsat.api.msat_get_interpolant(solver, groupsOfA, 1);
             assert(!mathsat.api.MSAT_ERROR_TERM(interpolant));
-            String s = mathsat.api.msat_term_repr(interpolant);
+            String s = mathsat.api.msat_to_smtlib2_term(solver, interpolant);
             System.out.println("\nOK, the interpolant is: " + s);
 
             //TODO convert to Node
