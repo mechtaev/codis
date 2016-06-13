@@ -35,6 +35,7 @@ public class MathSAT implements Solver {
         cfg.put("model", "true");
         this.config = mathsat.api.msat_create_config();
         mathsat.api.msat_set_option(this.config, "model_generation", "true");
+        //mathsat.api.msat_set_option(this.config, "interpolation", "true");
         this.solver = mathsat.api.msat_create_env(this.config);
     }
 
@@ -70,37 +71,6 @@ public class MathSAT implements Solver {
             assumption.accept(visitor);
             assumptionExprs.add(visitor.getExpr());
             decls.addAll(visitor.getDecls());
-        }
-
-        if (logger.isInfoEnabled()) {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS");
-            Date now = new Date();
-            Path logsmt = Paths.get("cbs" + sdf.format(now) + ".smt2");
-            try {
-                List<String> entries = new ArrayList<>();
-                entries.add("(set-option :produce-models true)");
-                Set<Long> seenDecls = new HashSet<>();
-                for (long d : decls) {
-                    if (seenDecls.add(d)) {
-                        String n = mathsat.api.msat_decl_get_name(d);
-                        String tp = "Bool";
-                        if (mathsat.api.msat_is_integer_type(solver, mathsat.api.msat_decl_get_return_type(d)) != 0) {
-                            tp = "Int";
-                        }
-                        entries.add("(declare-fun |" + n.replace("|", "\\|") + "| () " + tp + ")");
-                    }
-                }
-                long[] assertions = mathsat.api.msat_get_asserted_formulas(solver);
-                for (int i = 0; i < assertions.length; ++i) {
-                    String c = mathsat.api.msat_to_smtlib2_term(solver, assertions[i]);
-                    entries.add("(assert " + c + ")");
-                }
-                entries.add("(check-sat)");
-                entries.add("(get-model)");
-                Files.write(logsmt, entries, Charset.forName("UTF-8"));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
 
         long[] assumptionArray = new long[assumptionExprs.size()];
@@ -194,10 +164,60 @@ public class MathSAT implements Solver {
 
     @Override
     public Optional<Map<Variable, Constant>> getModel(List<Node> clauses) {
-        ArrayList<Node> assumptions = new ArrayList<>();
-        Either<Map<Variable, Constant>, List<Node>> result = getModelOrCore(clauses, assumptions);
-        if (result.isLeft()) {
-            return Optional.of(result.left().value());
+        mathsat.api.msat_reset_env(solver);
+        VariableMarshaller marshaller = new VariableMarshaller();
+        List<Long> decls = new ArrayList<>();
+        for (Node clause : clauses) {
+            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
+            clause.accept(visitor);
+            mathsat.api.msat_assert_formula(solver, visitor.getExpr());
+            decls.addAll(visitor.getDecls());
+        }
+
+        if (logger.isTraceEnabled()) {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS");
+            Date now = new Date();
+            Path logsmt = Paths.get("cbs" + sdf.format(now) + ".smt2");
+            try {
+                List<String> entries = new ArrayList<>();
+                entries.add("(set-option :produce-models true)");
+                Set<Long> seenDecls = new HashSet<>();
+                for (long d : decls) {
+                    if (seenDecls.add(d)) {
+                        String n = mathsat.api.msat_decl_get_name(d);
+                        String tp = "Bool";
+                        if (mathsat.api.msat_is_integer_type(solver, mathsat.api.msat_decl_get_return_type(d)) != 0) {
+                            tp = "Int";
+                        }
+                        entries.add("(declare-fun |" + n.replace("|", "\\|") + "| () " + tp + ")");
+                    }
+                }
+                long[] assertions = mathsat.api.msat_get_asserted_formulas(solver);
+                for (int i = 0; i < assertions.length; ++i) {
+                    String c = mathsat.api.msat_to_smtlib2_term(solver, assertions[i]);
+                    entries.add("(assert " + c + ")");
+                }
+                entries.add("(check-sat)");
+                entries.add("(get-model)");
+                Files.write(logsmt, entries, Charset.forName("UTF-8"));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        int status = mathsat.api.msat_solve(solver);
+        if (status == mathsat.api.MSAT_SAT) {
+            long model = mathsat.api.msat_get_model(solver);
+            if (mathsat.api.MSAT_ERROR_MODEL(model)) {
+                throw msatError();
+            }
+            try {
+                return Optional.of(getAssignment(model, marshaller));
+            } finally {
+                mathsat.api.msat_destroy_model(model);
+            }
+        } else if (status == mathsat.api.MSAT_UNKNOWN) {
+            throw msatError();
         } else {
             return Optional.empty();
         }
@@ -205,7 +225,54 @@ public class MathSAT implements Solver {
 
     @Override
     public Either<Map<Variable, Constant>, Node> getModelOrInterpolant(List<Node> leftClauses, List<Node> rightClauses) {
-        throw new UnsupportedOperationException();
+        mathsat.api.msat_reset_env(solver);
+
+        VariableMarshaller marshaller = new VariableMarshaller();
+        //List<FuncDecl> decls = new ArrayList<>();
+
+        int groupA = mathsat.api.msat_create_itp_group(solver);
+        int groupB = mathsat.api.msat_create_itp_group(solver);
+
+        mathsat.api.msat_set_itp_group(solver, groupA);
+        for (Node leftClause : leftClauses) {
+            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
+            leftClause.accept(visitor);
+            //decls.addAll(visitor.getDecls());
+            mathsat.api.msat_assert_formula(solver, visitor.getExpr());
+        }
+
+        mathsat.api.msat_set_itp_group(solver, groupB);
+        for (Node rightClause : rightClauses) {
+            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
+            rightClause.accept(visitor);
+            //decls.addAll(visitor.getDecls());
+            mathsat.api.msat_assert_formula(solver, visitor.getExpr());
+        }
+
+        int status = mathsat.api.msat_solve(solver);
+        if (status == mathsat.api.MSAT_SAT) {
+            long model = mathsat.api.msat_get_model(solver);
+            if (mathsat.api.MSAT_ERROR_MODEL(model)) {
+                throw msatError();
+            }
+            try {
+                return Either.left(getAssignment(model, marshaller));
+            } finally {
+                mathsat.api.msat_destroy_model(model);
+            }
+        } else if (status == mathsat.api.MSAT_UNKNOWN) {
+            throw msatError();
+        } else {
+            int[] groupsOfA = {groupA};
+            long interpolant = mathsat.api.msat_get_interpolant(solver, groupsOfA, 1);
+            assert(!mathsat.api.MSAT_ERROR_TERM(interpolant));
+            String s = mathsat.api.msat_term_repr(interpolant);
+            System.out.println("\nOK, the interpolant is: " + s);
+
+            //TODO convert to Node
+            throw new UnsupportedOperationException();
+        }
+
     }
 
     private class NodeTranslatorVisitor implements BottomUpVisitor {

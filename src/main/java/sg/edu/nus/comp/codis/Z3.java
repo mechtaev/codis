@@ -100,7 +100,7 @@ public class Z3 implements Solver {
         if (status.equals(Status.SATISFIABLE)) {
             Model model = solver.getModel();
             return Either.left(getAssignment(globalContext, model, marshaller));
-        } else {
+        } else if (status.equals(Status.UNSATISFIABLE)) {
             ArrayList<Node> unsatCore = new ArrayList<>();
             Expr[] unsatCoreArray = solver.getUnsatCore();
             ArrayList<Expr> unsatCoreExprs = new ArrayList<>(Arrays.asList(unsatCoreArray));
@@ -110,6 +110,8 @@ public class Z3 implements Solver {
                 }
             }
             return Either.right(unsatCore);
+        } else {
+            throw new UnsupportedOperationException();
         }
     }
 
@@ -187,13 +189,16 @@ public class Z3 implements Solver {
         if (status.equals(Status.SATISFIABLE)) {
             Model model = iSolver.getModel();
             return Either.left(getAssignment(globalIContext, model, marshaller));
-        } else {
+        } else if (status.equals(Status.UNSATISFIABLE)) {
             BoolExpr pat = globalIContext.mkAnd(globalIContext.MkInterpolant(left), right);
             Params params = globalIContext.mkParams();
 
             Expr proof = iSolver.getProof();
             Expr[] interps = globalIContext.GetInterpolant(proof, pat, params);
+            System.out.println("\nOK, the interpolant is: " + interps[0]);
             return Either.right(convertZ3ToNode(interps[0], marshaller));
+        } else {
+            throw new UnsupportedOperationException();
         }
 
     }
