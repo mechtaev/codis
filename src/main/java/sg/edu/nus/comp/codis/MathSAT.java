@@ -35,7 +35,10 @@ public class MathSAT implements Solver {
         cfg.put("model", "true");
         this.config = mathsat.api.msat_create_config();
         mathsat.api.msat_set_option(this.config, "model_generation", "true");
-        //mathsat.api.msat_set_option(this.config, "interpolation", "true");
+        mathsat.api.msat_set_option(this.config, "interpolation", "true");
+        mathsat.api.msat_set_option(this.config, "debug.api_call_trace", "1");
+        mathsat.api.msat_set_option(this.config, "debug.api_call_trace_filename", "trace.smt2");
+        logger.info("Working Directory = " + System.getProperty("user.dir"));
         this.solver = mathsat.api.msat_create_env(this.config);
     }
 
@@ -250,6 +253,7 @@ public class MathSAT implements Solver {
         }
 
         int status = mathsat.api.msat_solve(solver);
+        logger.info("solved");
         if (status == mathsat.api.MSAT_SAT) {
             long model = mathsat.api.msat_get_model(solver);
             if (mathsat.api.MSAT_ERROR_MODEL(model)) {
