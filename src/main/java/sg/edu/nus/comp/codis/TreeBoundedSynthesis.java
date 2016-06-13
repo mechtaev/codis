@@ -20,10 +20,13 @@ public class TreeBoundedSynthesis extends Synthesis {
     private Map<BranchOutput, List<BranchOutput>> tree;
     private Map<BranchOutput, List<Selector>> choices;
     private Map<Selector, Component> selected;
+    private boolean uniqueUsage;
+    private Map<Component, List<Selector>> componentUsage;
 
-    public TreeBoundedSynthesis(Solver solver, int bound) {
+    public TreeBoundedSynthesis(Solver solver, int bound, boolean uniqueUsage) {
         this.bound = bound;
         this.solver = solver;
+        this.uniqueUsage = uniqueUsage;
     }
 
     /*
@@ -41,8 +44,12 @@ public class TreeBoundedSynthesis extends Synthesis {
         tree = new HashMap<>();
         selected = new HashMap<>();
         choices = new HashMap<>();
-
+        componentUsage = new HashMap<>();
         List<Component> flattenedComponents = components.stream().map(Component::new).collect(Collectors.toList());
+        for (Component component : flattenedComponents) {
+            componentUsage.put(component, new ArrayList<>());
+        }
+
         BranchOutput root = new BranchOutput(testSuite.get(0).getOutputType());
         Pair<List<Node>, List<List<Selector>>> branchClauses = encodeBranch(root, bound, flattenedComponents, forbidden);
         List<Node> contextClauses = new ArrayList<>();
@@ -61,6 +68,11 @@ public class TreeBoundedSynthesis extends Synthesis {
         for (List<Selector> selectors : branchClauses.getRight()) {
             if (!selectors.isEmpty()) {
                 synthesisClauses.add(disjunction(selectors.stream().map(Not::new).collect(Collectors.toList())));
+            }
+        }
+        if (uniqueUsage) {
+            for (Component component : flattenedComponents) {
+                synthesisClauses.addAll(Cardinality.pairwise(componentUsage.get(component)));
             }
         }
         List<Node> clauses = new ArrayList<>();
@@ -133,6 +145,7 @@ public class TreeBoundedSynthesis extends Synthesis {
                 }
             }
             clauses.add(new Impl(selector, new Equal(output, component.getSemantics())));
+            componentUsage.get(component).add(selector);
             selected.put(selector, component);
             choices.get(output).add(selector);
         }
@@ -172,6 +185,7 @@ public class TreeBoundedSynthesis extends Synthesis {
                     }
                 }
                 clauses.add(new Impl(selector, new Equal(output, Traverse.substitute(component.getSemantics(), args))));
+                componentUsage.get(component).add(selector);
                 selected.put(selector, component);
                 choices.get(output).add(selector);
             }

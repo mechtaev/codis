@@ -33,11 +33,13 @@ public class CODIS extends Synthesis {
     }
 
     public static List<Component> getLeaves(Program p) {
-        List<Component> current = new ArrayList<Component>();
+        List<Component> current = new ArrayList<>();
         if (p.isLeaf()) {
             current.add(p.getRoot());
         } else {
-            p.getChildren().values().stream().map(c -> current.addAll(getLeaves(c)));
+            for (Program program : p.getChildren().values()) {
+                current.addAll(getLeaves(program));
+            }
         }
         return current;
     }
@@ -117,7 +119,8 @@ public class CODIS extends Synthesis {
     public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,
                                                                         Multiset<Node> components) {
         List<Component> flattenedComponents = components.stream().map(Component::new).collect(Collectors.toList());
-        TreeBoundedSynthesis synthesizer = new TreeBoundedSynthesis(Z3.getInstance(), bound);
+        conflicts = new HashMap<>();
+        TreeBoundedSynthesis synthesizer = new TreeBoundedSynthesis(Z3.getInstance(), bound, true);
         List<TestCase> initialTestSuite = new ArrayList<>();
         initialTestSuite.add(testSuite.get(0));
         Pair<Program, Map<Parameter, Constant>> initial = synthesizer.synthesize(initialTestSuite, components).get();
@@ -181,7 +184,7 @@ public class CODIS extends Synthesis {
         for (TestCase testCase : newFixed) {
             contextTestSuite.add(new SynthesisContext(testCase, last, leaf));
         }
-        TreeBoundedSynthesis synthesizer = new TreeBoundedSynthesis(Z3.getInstance(), bound);
+        TreeBoundedSynthesis synthesizer = new TreeBoundedSynthesis(Z3.getInstance(), bound, true);
         List<Program> forbidden = new ArrayList<>();
         Either<Pair<Program, Map<Parameter, Constant>>, Node> result =
                 synthesizer.synthesizeExt(contextTestSuite, components, forbidden);

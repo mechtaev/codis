@@ -2,8 +2,6 @@ package sg.edu.nus.comp.codis;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
-import fj.data.Either;
-import org.apache.commons.lang3.tuple.Pair;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import sg.edu.nus.comp.codis.ast.*;
@@ -20,11 +18,13 @@ import static org.junit.Assert.assertTrue;
  * Created by Sergey Mechtaev on 5/5/2016.
  */
 public class TestTreeBoundedSynthesis {
-    private static TreeBoundedSynthesis synthesizer2;
+    private static TreeBoundedSynthesis synthesizer;
+    private static TreeBoundedSynthesis synthesizerUnique;
 
     @BeforeClass
     public static void initSolver() {
-        synthesizer2 = new TreeBoundedSynthesis(Z3.getInstance(), 2);
+        synthesizer = new TreeBoundedSynthesis(Z3.getInstance(), 2, false);
+        synthesizerUnique = new TreeBoundedSynthesis(Z3.getInstance(), 2, true);
     }
 
     private final ProgramVariable x = ProgramVariable.mkInt("x");
@@ -48,7 +48,7 @@ public class TestTreeBoundedSynthesis {
         assignment2.put(y, IntConst.of(2));
         testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(3)));
 
-        Optional<Node> node = synthesizer2.synthesizeNode(testSuite, components);
+        Optional<Node> node = synthesizer.synthesizeNode(testSuite, components);
         assertTrue(node.isPresent());
         assertTrue(node.get().equals(new Add(x, y)) || node.get().equals(new Add(y, x)));
     }
@@ -77,7 +77,7 @@ public class TestTreeBoundedSynthesis {
         args.put((Hole)Components.ADD.getRight(), Program.leaf(new Component(y)));
         forbidden.add(Program.app(new Component(Components.ADD), args));
 
-        Optional<Node> node = synthesizer2.synthesizeNodeExt(testSuite, components, forbidden);
+        Optional<Node> node = synthesizer.synthesizeNodeExt(testSuite, components, forbidden);
         assertTrue(node.isPresent());
         assertTrue(node.get().equals(new Add(y, x)));
     }
@@ -110,9 +110,26 @@ public class TestTreeBoundedSynthesis {
         forbidden.add(Program.app(new Component(Components.ADD), args));
         forbidden.add(Program.app(new Component(Components.ADD), args2));
 
-        Optional<Node> node = synthesizer2.synthesizeNodeExt(testSuite, components, forbidden);
+        Optional<Node> node = synthesizer.synthesizeNodeExt(testSuite, components, forbidden);
         assertFalse(node.isPresent());
     }
+
+    @Test
+    public void testUnique() {
+        Multiset<Node> components = HashMultiset.create();
+        components.add(x);
+        components.add(Components.ADD);
+
+        ArrayList<TestCase> testSuite = new ArrayList<>();
+        Map<ProgramVariable, Node> assignment1 = new HashMap<>();
+        assignment1.put(x, IntConst.of(1));
+        assignment1.put(y, IntConst.of(1));
+        testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(2)));
+
+        Optional<Node> node = synthesizerUnique.synthesizeNode(testSuite, components);
+        assertFalse(node.isPresent());
+    }
+
 
     @Test
     public void testForbiddenNonexistent() {
@@ -138,7 +155,7 @@ public class TestTreeBoundedSynthesis {
         args.put((Hole)Components.ADD.getRight(), Program.leaf(new Component(y)));
         forbidden.add(Program.app(new Component(Components.SUB), args));
 
-        Optional<Node> node = synthesizer2.synthesizeNodeExt(testSuite, components, forbidden);
+        Optional<Node> node = synthesizer.synthesizeNodeExt(testSuite, components, forbidden);
         assertTrue(node.isPresent());
         assertTrue(node.get().equals(new Add(x, y)) || node.get().equals(new Add(y, x)));
     }
