@@ -2,6 +2,8 @@ package sg.edu.nus.comp.codis;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
+import fj.data.Either;
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import sg.edu.nus.comp.codis.ast.*;
@@ -75,9 +77,9 @@ public class TestTreeBoundedSynthesis {
         args.put((Hole)Components.ADD.getRight(), Program.leaf(new Component(y)));
         forbidden.add(Program.app(new Component(Components.ADD), args));
 
-        Optional<Node> node = synthesizer2.synthesizeNodeWithForbidden(testSuite, components, forbidden);
+        Optional<Node> node = synthesizer2.synthesizeNodeExt(testSuite, components, forbidden);
         assertTrue(node.isPresent());
-        node.get().equals(new Add(y, x));
+        assertTrue(node.get().equals(new Add(y, x)));
     }
 
     @Test
@@ -108,9 +110,8 @@ public class TestTreeBoundedSynthesis {
         forbidden.add(Program.app(new Component(Components.ADD), args));
         forbidden.add(Program.app(new Component(Components.ADD), args2));
 
-        Optional<Node> node = synthesizer2.synthesizeNodeWithForbidden(testSuite, components, forbidden);
+        Optional<Node> node = synthesizer2.synthesizeNodeExt(testSuite, components, forbidden);
         assertFalse(node.isPresent());
-
     }
 
     @Test
@@ -137,7 +138,7 @@ public class TestTreeBoundedSynthesis {
         args.put((Hole)Components.ADD.getRight(), Program.leaf(new Component(y)));
         forbidden.add(Program.app(new Component(Components.SUB), args));
 
-        Optional<Node> node = synthesizer2.synthesizeNodeWithForbidden(testSuite, components, forbidden);
+        Optional<Node> node = synthesizer2.synthesizeNodeExt(testSuite, components, forbidden);
         assertTrue(node.isPresent());
         assertTrue(node.get().equals(new Add(x, y)) || node.get().equals(new Add(y, x)));
     }

@@ -203,6 +203,11 @@ public class MathSAT implements Solver {
         }
     }
 
+    @Override
+    public Either<Map<Variable, Constant>, Node> getModelOrInterpolant(List<Node> leftClauses, List<Node> rightClauses) {
+        throw new UnsupportedOperationException();
+    }
+
     private class NodeTranslatorVisitor implements BottomUpVisitor {
 
         private Stack<Long> exprs;

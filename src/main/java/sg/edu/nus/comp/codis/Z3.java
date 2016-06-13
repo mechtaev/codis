@@ -25,8 +25,11 @@ public class Z3 implements Solver {
 
     private Logger logger = LoggerFactory.getLogger(Z3.class);
 
-    private Context ctx;
+    private Context globalContext;
     private com.microsoft.z3.Solver solver;
+
+    private InterpolationContext globalIContext;
+    private com.microsoft.z3.Solver iSolver;
 
     private Z3() {
         if (INSTANCE != null) {
@@ -34,8 +37,14 @@ public class Z3 implements Solver {
         }
         HashMap<String, String> cfg = new HashMap<>();
         cfg.put("model", "true");
-        this.ctx = new Context(cfg);
-        this.solver = ctx.mkSolver();
+        this.globalContext = new Context(cfg);
+        this.solver = globalContext.mkSolver();
+
+        HashMap<String, String> icfg = new HashMap<>();
+        icfg.put("model", "true");
+        icfg.put("proof", "true");
+        this.globalIContext = new InterpolationContext(icfg);
+        this.iSolver = globalIContext.mkSolver();
     }
 
     public static Z3 getInstance() {
@@ -43,25 +52,26 @@ public class Z3 implements Solver {
     }
 
     public void dispose() {
-        this.ctx.dispose();
+        this.globalContext.dispose();
+        this.globalIContext.dispose();
     }
 
     @Override
     public Either<Map<Variable, Constant>, List<Node>> getModelOrCore(List<Node> clauses,
-                                                                           List<Node> assumptions) {
+                                                                      List<Node> assumptions) {
 
         solver.reset();
         VariableMarshaller marshaller = new VariableMarshaller();
         List<FuncDecl> decls = new ArrayList<>();
         for (Node clause : clauses) {
-            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
+            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(globalContext, marshaller);
             clause.accept(visitor);
             solver.add((BoolExpr)visitor.getExpr());
             decls.addAll(visitor.getDecls());
         }
         ArrayList<BoolExpr> assumptionExprs = new ArrayList<>();
         for (Node assumption : assumptions) {
-            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
+            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(globalContext, marshaller);
             assumption.accept(visitor);
             assumptionExprs.add((BoolExpr)visitor.getExpr());
             decls.addAll(visitor.getDecls());
@@ -89,7 +99,7 @@ public class Z3 implements Solver {
         Status status = solver.check(assumptionArray);
         if (status.equals(Status.SATISFIABLE)) {
             Model model = solver.getModel();
-            return Either.left(getAssignment(model, marshaller));
+            return Either.left(getAssignment(globalContext, model, marshaller));
         } else {
             ArrayList<Node> unsatCore = new ArrayList<>();
             Expr[] unsatCoreArray = solver.getUnsatCore();
@@ -103,7 +113,7 @@ public class Z3 implements Solver {
         }
     }
 
-    private Map<Variable, Constant> getAssignment(Model model, VariableMarshaller marshaller) {
+    private Map<Variable, Constant> getAssignment(Context ctx, Model model, VariableMarshaller marshaller) {
         HashMap<Variable, Constant> assingment = new HashMap<>();
         for (Variable variable: marshaller.getVariables()) {
             if (TypeInference.typeOf(variable).equals(IntType.TYPE)) {
@@ -149,17 +159,119 @@ public class Z3 implements Solver {
         }
     }
 
+    @Override
+    public Either<Map<Variable, Constant>, Node> getModelOrInterpolant(List<Node> leftClauses, List<Node> rightClauses) {
+        iSolver.reset();
+        VariableMarshaller marshaller = new VariableMarshaller();
+        //List<FuncDecl> decls = new ArrayList<>();
+        BoolExpr left = globalIContext.mkBool(true);
+
+        for (Node leftClause : leftClauses) {
+            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(globalIContext, marshaller);
+            leftClause.accept(visitor);
+            //decls.addAll(visitor.getDecls());
+            left = globalIContext.mkAnd(left, (BoolExpr)visitor.getExpr());
+        }
+        BoolExpr right = globalIContext.mkBool(true);
+        for (Node rightClause : rightClauses) {
+            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(globalIContext, marshaller);
+            rightClause.accept(visitor);
+            //decls.addAll(visitor.getDecls());
+            right = globalIContext.mkAnd(right, (BoolExpr)visitor.getExpr());
+        }
+
+        iSolver.add(left);
+        iSolver.add(right);
+
+        Status status = iSolver.check();
+        if (status.equals(Status.SATISFIABLE)) {
+            Model model = iSolver.getModel();
+            return Either.left(getAssignment(globalIContext, model, marshaller));
+        } else {
+            BoolExpr pat = globalIContext.mkAnd(globalIContext.MkInterpolant(left), right);
+            Params params = globalIContext.mkParams();
+
+            Expr proof = iSolver.getProof();
+            Expr[] interps = globalIContext.GetInterpolant(proof, pat, params);
+            return Either.right(convertZ3ToNode(interps[0], marshaller));
+        }
+
+    }
+
+    //TODO: boolean symbols true and false are not supported (if they are possible to get)
+    private Node convertZ3ToNode(Expr expr, VariableMarshaller marshaller) {
+        if (expr.isAdd()) {
+            Expr[] args = expr.getArgs();
+            return new Add(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isSub()) {
+            Expr[] args = expr.getArgs();
+            return new Sub(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isMul()) {
+            Expr[] args = expr.getArgs();
+            return new Mult(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isDiv()) {
+            Expr[] args = expr.getArgs();
+            return new Div(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isAnd()) {
+            Expr[] args = expr.getArgs();
+            return new And(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isOr()) {
+            Expr[] args = expr.getArgs();
+            return new Or(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isIff()) {
+            Expr[] args = expr.getArgs();
+            return new Iff(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isImplies()) {
+            Expr[] args = expr.getArgs();
+            return new Impl(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isGT()) {
+            Expr[] args = expr.getArgs();
+            return new Greater(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isLT()) {
+            Expr[] args = expr.getArgs();
+            return new Less(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isGE()) {
+            Expr[] args = expr.getArgs();
+            return new GreaterOrEqual(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isLE()) {
+            Expr[] args = expr.getArgs();
+            return new LessOrEqual(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isEq()) {
+                Expr[] args = expr.getArgs();
+                return new Equal(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isUMinus()) {
+            Expr[] args = expr.getArgs();
+            return new Minus(convertZ3ToNode(args[0], marshaller));
+        } else if (expr.isNot()) {
+            Expr[] args = expr.getArgs();
+            return new Not(convertZ3ToNode(args[0], marshaller));
+        } else if (expr.isIntNum()) {
+            return IntConst.of(((IntNum)expr).getInt());
+        } else if (expr.isConst()) {
+            return marshaller.toVariable(expr.getFuncDecl().getName().toString());
+        } else if (expr.isITE()) {
+            Expr[] args = expr.getArgs();
+            return new ITE(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller), convertZ3ToNode(args[2], marshaller));
+        }
+
+        //TODO BV are not supported because we cannot cover all possible Z3 nodes with our AST
+
+        throw new UnsupportedOperationException("failed to convert Z3 formula: " + expr);
+    }
+
     private class NodeTranslatorVisitor implements BottomUpVisitor {
 
         private Stack<Expr> exprs;
 
         private List<FuncDecl> decls;
         private VariableMarshaller marshaller;
+        private Context ctx;
 
-        NodeTranslatorVisitor(VariableMarshaller marshaller) {
+        NodeTranslatorVisitor(Context ctx, VariableMarshaller marshaller) {
             this.marshaller = marshaller;
             this.exprs = new Stack<>();
             this.decls = new ArrayList<>();
+            this.ctx = ctx;
         }
 
         Expr getExpr() {
@@ -171,7 +283,7 @@ public class Z3 implements Solver {
             return decls;
         }
 
-        private void processVariable(Variable variable) {
+        private void processVariable(Context ctx, Variable variable) {
             if (TypeInference.typeOf(variable).equals(IntType.TYPE)) {
                 exprs.push(ctx.mkIntConst(marshaller.toString(variable)));
                 decls.add(ctx.mkConstDecl(marshaller.toString(variable), ctx.getIntSort()));
@@ -189,12 +301,12 @@ public class Z3 implements Solver {
 
         @Override
         public void visit(ProgramVariable programVariable) {
-            processVariable(programVariable);
+            processVariable(ctx, programVariable);
         }
 
         @Override
         public void visit(Location location) {
-            processVariable(location);
+            processVariable(ctx, location);
         }
 
         @Override
@@ -316,27 +428,27 @@ public class Z3 implements Solver {
 
         @Override
         public void visit(ComponentInput componentInput) {
-            processVariable(componentInput);
+            processVariable(ctx, componentInput);
         }
 
         @Override
         public void visit(ComponentOutput componentOutput) {
-            processVariable(componentOutput);
+            processVariable(ctx, componentOutput);
         }
 
         @Override
         public void visit(TestInstance testInstance) {
-            processVariable(testInstance);
+            processVariable(ctx, testInstance);
         }
 
         @Override
         public void visit(Parameter parameter) {
-            processVariable(parameter);
+            processVariable(ctx, parameter);
         }
 
         @Override
         public void visit(Hole hole) {
-            processVariable(hole);
+            processVariable(ctx, hole);
         }
 
         @Override
@@ -349,7 +461,7 @@ public class Z3 implements Solver {
 
         @Override
         public void visit(Selector selector) {
-            processVariable(selector);
+            processVariable(ctx, selector);
         }
 
         @Override
@@ -518,7 +630,7 @@ public class Z3 implements Solver {
 
         @Override
         public void visit(BranchOutput branchOutput) {
-            processVariable(branchOutput);
+            processVariable(ctx, branchOutput);
         }
 
     }

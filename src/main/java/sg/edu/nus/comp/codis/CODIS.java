@@ -23,6 +23,14 @@ public class CODIS extends Synthesis {
         this.bound = bound;
     }
 
+    public static List<Component> getLeafs(Program p) {
+        throw new UnsupportedOperationException();
+    }
+
+    public static Program substitute(Program p, Map<Component, Program> mapping) {
+        throw new UnsupportedOperationException();
+    }
+
     @Override
     public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,
                                                                         Multiset<Node> components) {

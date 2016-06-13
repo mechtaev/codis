@@ -1,6 +1,7 @@
 package sg.edu.nus.comp.codis;
 
 import com.google.common.collect.Multiset;
+import fj.data.Either;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import sg.edu.nus.comp.codis.ast.*;
@@ -25,9 +26,18 @@ public class TreeBoundedSynthesis extends Synthesis {
         this.solver = solver;
     }
 
-    public Optional<Pair<Program, Map<Parameter, Constant>>> synthesizeWithForbidden(List<TestCase> testSuite,
-                                                                                     Multiset<Node> components,
-                                                                                     List<Program> forbidden) {
+    /*
+    Forbid given programs and return conflict if fails
+
+    TODO:
+     1. Try with equivalent components
+     2. Implement cardinality constraints for resource bound
+     3. Add version with interpolation
+
+     */
+    public Either<Pair<Program, Map<Parameter, Constant>>, Node> synthesizeExt(List<TestCase> testSuite,
+                                                                               Multiset<Node> components,
+                                                                               List<Program> forbidden) {
         tree = new HashMap<>();
         selected = new HashMap<>();
         choices = new HashMap<>();
@@ -35,45 +45,53 @@ public class TreeBoundedSynthesis extends Synthesis {
         List<Component> flattenedComponents = components.stream().map(Component::new).collect(Collectors.toList());
         BranchOutput root = new BranchOutput(testSuite.get(0).getOutputType());
         Pair<List<Node>, List<List<Selector>>> branchClauses = encodeBranch(root, bound, flattenedComponents, forbidden);
-        List<Node> clauses = new ArrayList<>();
+        List<Node> contextClauses = new ArrayList<>();
+        List<Node> synthesisClauses = new ArrayList<>();
         for (TestCase test : testSuite) {
             for (Node node : branchClauses.getLeft()) {
-                clauses.add(instantiate(node, test));
+                synthesisClauses.add(instantiate(node, test));
             }
-            clauses.addAll(testToConstraint(test, root));
+            contextClauses.addAll(testToConstraint(test, root));
         }
         for (List<Selector> selectors : choices.values()) {
             if (!selectors.isEmpty()) {
-                clauses.add(disjunction(selectors));
+                synthesisClauses.add(disjunction(selectors));
             }
         }
         for (List<Selector> selectors : branchClauses.getRight()) {
             if (!selectors.isEmpty()) {
-                clauses.add(disjunction(selectors.stream().map(Not::new).collect(Collectors.toList())));
+                synthesisClauses.add(disjunction(selectors.stream().map(Not::new).collect(Collectors.toList())));
             }
         }
-        Optional<Map<Variable, Constant>> assignment = solver.getModel(clauses);
-        if (assignment.isPresent()) {
-            return Optional.of(decode(assignment.get(), root));
+        List<Node> clauses = new ArrayList<>();
+        //FIXME: this could potentially reduce performance of TBS when we don't need conflicts
+        Either<Map<Variable, Constant>, Node> result = solver.getModelOrInterpolant(contextClauses, synthesisClauses);
+        if (result.isLeft()) {
+            return Either.left(decode(result.left().value(), root));
         } else {
-            return Optional.empty();
+            return Either.right(result.right().value()); // there must be a more elegant way to express this
         }
     }
 
     @Override
     public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,
                                                                         Multiset<Node> components) {
-        return synthesizeWithForbidden(testSuite, components, new ArrayList<>());
+        Either<Pair<Program, Map<Parameter, Constant>>, Node> extResult = synthesizeExt(testSuite, components, new ArrayList<>());
+        if (extResult.isRight()) {
+            return Optional.empty();
+        } else {
+            return Optional.of(extResult.left().value());
+        }
     }
 
-    public Optional<Node> synthesizeNodeWithForbidden(List<TestCase> testSuite,
-                                                                                         Multiset<Node> components,
-                                                                                         List<Program> forbidden) {
-        Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizeWithForbidden(testSuite, components, forbidden);
-        if (!result.isPresent())
+    public Optional<Node> synthesizeNodeExt(List<TestCase> testSuite,
+                                            Multiset<Node> components,
+                                            List<Program> forbidden) {
+        Either<Pair<Program, Map<Parameter, Constant>>, Node> result = synthesizeExt(testSuite, components, forbidden);
+        if (result.isRight())
             return Optional.empty();
 
-        return Optional.of(Traverse.substitute(result.get().getLeft().getSemantics(), result.get().getRight()));
+        return Optional.of(Traverse.substitute(result.left().value().getLeft().getSemantics(), result.left().value().getRight()));
     }
 
 
