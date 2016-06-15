@@ -2,6 +2,7 @@ package sg.edu.nus.comp.codis;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.*;
 import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.*;
@@ -24,7 +25,7 @@ public class TestCODIS {
 
     @BeforeClass
     public static void initSolver() {
-        synthesizer = new CODIS(Z3.getInstance(), 2);
+        synthesizer = new CODIS(Z3.buildSolver(), Z3.buildInterpolatingSolver(), 2);
     }
 
     private final ProgramVariable x = ProgramVariable.mkInt("x");
@@ -48,9 +49,10 @@ public class TestCODIS {
         assignment2.put(y, IntConst.of(2));
         testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(3)));
 
-        Optional<Node> node = synthesizer.synthesizeNode(testSuite, components);
-        assertTrue(node.isPresent());
-        assertTrue(node.get().equals(new Add(x, y)) || node.get().equals(new Add(y, x)));
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizer.synthesize(testSuite, components);
+        assertTrue(result.isPresent());
+        Node node = result.get().getLeft().getSemantics(result.get().getRight());
+        assertTrue(node.equals(new Add(x, y)) || node.equals(new Add(y, x)));
     }
 
 

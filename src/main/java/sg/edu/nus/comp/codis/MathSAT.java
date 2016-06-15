@@ -18,32 +18,30 @@ import java.util.*;
 /**
  * Created by Alberto Griggio on 28/4/2016.
  */
-public class MathSAT implements Solver {
-
-    private static final MathSAT INSTANCE = new MathSAT();
+public class MathSAT implements Solver, InterpolatingSolver {
 
     private Logger logger = LoggerFactory.getLogger(MathSAT.class);
 
     private long config;
     private long solver;
 
-    private MathSAT() {
-        if (INSTANCE != null) {
-            throw new IllegalStateException("Already instantiated");
-        }
-        HashMap<String, String> cfg = new HashMap<>();
-        cfg.put("model", "true");
+    private MathSAT(boolean interpolating) {
         this.config = mathsat.api.msat_create_config();
         mathsat.api.msat_set_option(this.config, "model_generation", "true");
-        mathsat.api.msat_set_option(this.config, "interpolation", "true");
-        mathsat.api.msat_set_option(this.config, "debug.api_call_trace", "1");
-        mathsat.api.msat_set_option(this.config, "debug.api_call_trace_filename", "trace.smt2");
-        logger.info("Working Directory = " + System.getProperty("user.dir"));
+        if (interpolating) {
+            mathsat.api.msat_set_option(this.config, "interpolation", "true");
+        }
+        //mathsat.api.msat_set_option(this.config, "debug.api_call_trace", "1");
+        //mathsat.api.msat_set_option(this.config, "debug.api_call_trace_filename", "trace.smt2");
         this.solver = mathsat.api.msat_create_env(this.config);
     }
 
-    public static MathSAT getInstance() {
-        return INSTANCE;
+    public static Solver buildSolver() {
+        return new MathSAT(false);
+    }
+
+    public static InterpolatingSolver buildInterpolatingSolver() {
+        return new MathSAT(true);
     }
 
     public void dispose() {
@@ -253,7 +251,6 @@ public class MathSAT implements Solver {
         }
 
         int status = mathsat.api.msat_solve(solver);
-        logger.info("solved");
         if (status == mathsat.api.MSAT_SAT) {
             long model = mathsat.api.msat_get_model(solver);
             if (mathsat.api.MSAT_ERROR_MODEL(model)) {

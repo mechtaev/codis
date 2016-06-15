@@ -20,6 +20,13 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestIZ3 {
 
+    private static InterpolatingSolver solver;
+
+    @BeforeClass
+    public static void initSolver() {
+        solver = Z3.buildInterpolatingSolver();
+    }
+
     @Test
     public void testInequality() {
         ProgramVariable a = ProgramVariable.mkInt("a");
@@ -36,7 +43,7 @@ public class TestIZ3 {
         right.add(new Less(c, d));
         right.add(new Less(d, a));
 
-        Either<Map<Variable, Constant>, Node> result = Z3.getInstance().getModelOrInterpolant(left, right);
+        Either<Map<Variable, Constant>, Node> result = solver.getModelOrInterpolant(left, right);
         assertTrue(result.isRight());
         //TODO: can check more here
     }
@@ -54,7 +61,7 @@ public class TestIZ3 {
 
         right.add(new Less(a, b));
 
-        Either<Map<Variable, Constant>, Node> result = Z3.getInstance().getModelOrInterpolant(left, right);
+        Either<Map<Variable, Constant>, Node> result = solver.getModelOrInterpolant(left, right);
         assertTrue(result.isRight());
         //TODO: can check more here
     }

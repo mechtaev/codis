@@ -20,6 +20,13 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestZ3 {
 
+    private static Solver solver;
+
+    @BeforeClass
+    public static void initSolver() {
+        solver = Z3.buildSolver();
+    }
+
     @Test
     public void testEquality() {
         ArrayList<Node> clauses = new ArrayList<>();
@@ -27,7 +34,7 @@ public class TestZ3 {
         ProgramVariable y = ProgramVariable.mkInt("y");
         clauses.add(new Equal(x, y));
         clauses.add(new Equal(x, IntConst.of(5)));
-        Optional<Map<Variable, Constant>> result = Z3.getInstance().getModel(clauses);
+        Optional<Map<Variable, Constant>> result = solver.getModel(clauses);
         assertTrue(result.isPresent());
         assertEquals(result.get().get(y), IntConst.of(5));
     }
@@ -46,7 +53,7 @@ public class TestZ3 {
         ArrayList<Node> assumptions = new ArrayList<>();
         assumptions.add(new Not(a));
         assumptions.add(new Not(b));
-        Either<Map<Variable, Constant>, List<Node>> unsatCore = Z3.getInstance().getModelOrCore(clauses, assumptions);
+        Either<Map<Variable, Constant>, List<Node>> unsatCore = solver.getModelOrCore(clauses, assumptions);
         assertTrue(unsatCore.isRight());
         assertTrue(unsatCore.right().value().contains(new Not(a)));
         assertFalse(unsatCore.right().value().contains(new Not(b)));
@@ -59,7 +66,7 @@ public class TestZ3 {
         ProgramVariable y = ProgramVariable.mkBV("y", 32);
         clauses.add(new Equal(new BVAdd(x, y), BVConst.ofLong(5, 32)));
         clauses.add(new Equal(y, BVConst.ofLong(2, 32)));
-        Optional<Map<Variable, Constant>> model = Z3.getInstance().getModel(clauses);
+        Optional<Map<Variable, Constant>> model = solver.getModel(clauses);
         assertTrue(model.isPresent());
         assertEquals(model.get().get(x), BVConst.ofLong(3, 32));
     }

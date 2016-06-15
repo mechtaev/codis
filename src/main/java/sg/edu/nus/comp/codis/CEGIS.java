@@ -14,7 +14,7 @@ import java.util.*;
 /**
  * Created by Sergey Mechtaev on 7/4/2016.
  */
-public class CEGIS extends Synthesis {
+public class CEGIS implements Synthesis {
 
     private Synthesis synthesizer;
 

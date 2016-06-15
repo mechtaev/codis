@@ -1,7 +1,6 @@
 package sg.edu.nus.comp.codis;
 
 import com.google.common.collect.Multiset;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
@@ -14,7 +13,7 @@ import java.util.stream.Collectors;
 
 
 /**
- * Created by Sergey Mechtaev on 14/4/2016.
+ * Generating divergent test based on ComponentBasedSynthesis
  */
 public class DivergentTest {
 
@@ -29,7 +28,7 @@ public class DivergentTest {
                                                            List<ProgramVariable> inputVariables) {
         assert !testSuite.isEmpty();
 
-        CBS cbs = new CBS(Z3.getInstance(), false, Optional.empty()); // integer only for now
+        ComponentBasedSynthesis cbs = new ComponentBasedSynthesis(solver, false, Optional.empty()); //FIXME: integer encoding is not efficient, why we use it?
 
         Type outputType = testSuite.get(0).getOutputType();
 

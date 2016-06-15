@@ -14,7 +14,7 @@ import java.util.Optional;
  *
  * Test-Driven Synthesis, PLDI'14
  */
-public class TDS extends Synthesis {
+public class TestDrivenSynthesis implements Synthesis {
 
     @Override
     public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,

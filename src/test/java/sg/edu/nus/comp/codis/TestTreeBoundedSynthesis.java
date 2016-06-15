@@ -2,6 +2,8 @@ package sg.edu.nus.comp.codis;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
+import org.apache.commons.lang3.tuple.Pair;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import sg.edu.nus.comp.codis.ast.*;
@@ -23,8 +25,8 @@ public class TestTreeBoundedSynthesis {
 
     @BeforeClass
     public static void initSolver() {
-        synthesizer = new TreeBoundedSynthesis(Z3.getInstance(), 2, false);
-        synthesizerUnique = new TreeBoundedSynthesis(Z3.getInstance(), 2, true);
+        synthesizer = new TreeBoundedSynthesis(Z3.buildInterpolatingSolver(), 2, false);
+        synthesizerUnique = new TreeBoundedSynthesis(Z3.buildInterpolatingSolver(), 2, true);
     }
 
     private final ProgramVariable x = ProgramVariable.mkInt("x");
@@ -48,13 +50,15 @@ public class TestTreeBoundedSynthesis {
         assignment2.put(y, IntConst.of(2));
         testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(3)));
 
-        Optional<Node> node = synthesizer.synthesizeNode(testSuite, components);
-        assertTrue(node.isPresent());
-        assertTrue(node.get().equals(new Add(x, y)) || node.get().equals(new Add(y, x)));
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizer.synthesize(testSuite, components);
+        assertTrue(result.isPresent());
+        Node node = result.get().getLeft().getSemantics(result.get().getRight());
+        assertTrue(node.equals(new Add(x, y)) || node.equals(new Add(y, x)));
     }
 
     @Test
     public void testForbiddenChoice() {
+
         Multiset<Node> components = HashMultiset.create();
         components.add(x);
         components.add(y);
@@ -77,9 +81,11 @@ public class TestTreeBoundedSynthesis {
         args.put((Hole)Components.ADD.getRight(), Program.leaf(new Component(y)));
         forbidden.add(Program.app(new Component(Components.ADD), args));
 
-        Optional<Node> node = synthesizer.synthesizeNodeExt(testSuite, components, forbidden);
-        assertTrue(node.isPresent());
-        assertTrue(node.get().equals(new Add(y, x)));
+        Synthesis synthesizerWithForbidden = new TreeBoundedSynthesis(Z3.buildInterpolatingSolver(), 2, false, forbidden);
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerWithForbidden.synthesize(testSuite, components);
+        assertTrue(result.isPresent());
+        Node node = result.get().getLeft().getSemantics(result.get().getRight());
+        assertEquals(node, new Add(y, x));
     }
 
     @Test
@@ -110,8 +116,9 @@ public class TestTreeBoundedSynthesis {
         forbidden.add(Program.app(new Component(Components.ADD), args));
         forbidden.add(Program.app(new Component(Components.ADD), args2));
 
-        Optional<Node> node = synthesizer.synthesizeNodeExt(testSuite, components, forbidden);
-        assertFalse(node.isPresent());
+        Synthesis synthesizerWithForbidden = new TreeBoundedSynthesis(Z3.buildInterpolatingSolver(), 2, false, forbidden);
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerWithForbidden.synthesize(testSuite, components);
+        assertFalse(result.isPresent());
     }
 
     @Test
@@ -126,8 +133,8 @@ public class TestTreeBoundedSynthesis {
         assignment1.put(y, IntConst.of(1));
         testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(2)));
 
-        Optional<Node> node = synthesizerUnique.synthesizeNode(testSuite, components);
-        assertFalse(node.isPresent());
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerUnique.synthesize(testSuite, components);
+        assertFalse(result.isPresent());
     }
 
 
@@ -155,9 +162,11 @@ public class TestTreeBoundedSynthesis {
         args.put((Hole)Components.ADD.getRight(), Program.leaf(new Component(y)));
         forbidden.add(Program.app(new Component(Components.SUB), args));
 
-        Optional<Node> node = synthesizer.synthesizeNodeExt(testSuite, components, forbidden);
-        assertTrue(node.isPresent());
-        assertTrue(node.get().equals(new Add(x, y)) || node.get().equals(new Add(y, x)));
+        Synthesis synthesizerWithForbidden = new TreeBoundedSynthesis(Z3.buildInterpolatingSolver(), 2, false, forbidden);
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerWithForbidden.synthesize(testSuite, components);
+        assertTrue(result.isPresent());
+        Node node = result.get().getLeft().getSemantics(result.get().getRight());
+        assertTrue(node.equals(new Add(x, y)) || node.equals(new Add(y, x)));
     }
 
 }

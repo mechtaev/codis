@@ -11,18 +11,8 @@ import java.util.Optional;
 /**
  * Created by Sergey Mechtaev on 7/4/2016.
  */
-public abstract class Synthesis {
+public interface Synthesis {
 
-    public abstract Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,
-                                                                                 Multiset<Node> components);
-
-    public Optional<Node> synthesizeNode(List<TestCase> testSuite,
-                                         Multiset<Node> components) {
-        Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesize(testSuite, components);
-        if (!result.isPresent())
-            return Optional.empty();
-
-        return Optional.of(Traverse.substitute(result.get().getLeft().getSemantics(), result.get().getRight()));
-    }
+    Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite, Multiset<Node> components);
 
 }

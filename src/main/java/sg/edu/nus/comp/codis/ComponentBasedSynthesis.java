@@ -11,23 +11,22 @@ import sg.edu.nus.comp.codis.ast.theory.*;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * Created by Sergey Mechtaev on 7/4/2016.
  *
  * Oracle-guided Component-based Program Synthesis, ICSE'10
  */
-public class CBS extends Synthesis {
+public class ComponentBasedSynthesis implements Synthesis {
 
-    private Logger logger = LoggerFactory.getLogger(CBS.class);
+    private Logger logger = LoggerFactory.getLogger(ComponentBasedSynthesis.class);
 
     private Solver solver;
 
     private Type encodingType;
     private Optional<Integer> sizeBound;
 
-    public CBS(Solver solver, boolean useBV32, Optional<Integer> sizeBound) {
+    public ComponentBasedSynthesis(Solver solver, boolean useBV32, Optional<Integer> sizeBound) {
         this.solver = solver;
         if (useBV32) {
             encodingType = new BVType(32);

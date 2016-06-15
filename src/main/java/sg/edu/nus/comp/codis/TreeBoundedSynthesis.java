@@ -13,45 +13,52 @@ import java.util.stream.Collectors;
 /**
  * Created by Sergey Mechtaev on 2/5/2016.
  */
-public class TreeBoundedSynthesis extends Synthesis {
+public class TreeBoundedSynthesis extends SynthesisWithLearning {
 
     private int bound;
-    private Solver solver;
+    private boolean uniqueUsage;
+    private List<Program> globalForbidden;
+
     private Map<BranchOutput, List<BranchOutput>> tree;
     private Map<BranchOutput, List<Selector>> choices;
     private Map<Selector, Component> selected;
-    private boolean uniqueUsage;
     private Map<Component, List<Selector>> componentUsage;
 
-    public TreeBoundedSynthesis(Solver solver, int bound, boolean uniqueUsage) {
+    private InterpolatingSolver solver;
+
+    public TreeBoundedSynthesis(InterpolatingSolver solver, int bound, boolean uniqueUsage, List<Program> forbidden) {
         this.bound = bound;
         this.solver = solver;
         this.uniqueUsage = uniqueUsage;
+        this.globalForbidden = forbidden;
+    }
+
+    public TreeBoundedSynthesis(InterpolatingSolver solver, int bound, boolean uniqueUsage) {
+        this.bound = bound;
+        this.solver = solver;
+        this.uniqueUsage = uniqueUsage;
+        this.globalForbidden = new ArrayList<>();
     }
 
     /*
-    Forbid given programs and return conflict if fails
-
     TODO:
      1. Try with equivalent components
-     2. Implement cardinality constraints for resource bound
-     3. Add version with interpolation
-
      */
-    public Either<Pair<Program, Map<Parameter, Constant>>, Node> synthesizeExt(List<TestCase> testSuite,
-                                                                               Multiset<Node> components,
-                                                                               List<Program> forbidden) {
+    @Override
+    public Either<Pair<Program, Map<Parameter, Constant>>, Node> synthesizeOrLearn(List<TestCase> testSuite,
+                                                                                   Multiset<Node> components) {
         tree = new HashMap<>();
         selected = new HashMap<>();
         choices = new HashMap<>();
         componentUsage = new HashMap<>();
+
         List<Component> flattenedComponents = components.stream().map(Component::new).collect(Collectors.toList());
         for (Component component : flattenedComponents) {
             componentUsage.put(component, new ArrayList<>());
         }
 
         BranchOutput root = new BranchOutput(testSuite.get(0).getOutputType());
-        Pair<List<Node>, List<List<Selector>>> branchClauses = encodeBranch(root, bound, flattenedComponents, forbidden);
+        Pair<List<Node>, List<List<Selector>>> branchClauses = encodeBranch(root, bound, flattenedComponents, globalForbidden);
         List<Node> contextClauses = new ArrayList<>();
         List<Node> synthesisClauses = new ArrayList<>();
         for (TestCase test : testSuite) {
@@ -84,29 +91,6 @@ public class TreeBoundedSynthesis extends Synthesis {
             return Either.right(result.right().value()); // there must be a more elegant way to express this
         }
     }
-
-    @Override
-    public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,
-                                                                        Multiset<Node> components) {
-        Either<Pair<Program, Map<Parameter, Constant>>, Node> extResult = synthesizeExt(testSuite, components, new ArrayList<>());
-        if (extResult.isRight()) {
-            return Optional.empty();
-        } else {
-            return Optional.of(extResult.left().value());
-        }
-    }
-
-    public Optional<Node> synthesizeNodeExt(List<TestCase> testSuite,
-                                            Multiset<Node> components,
-                                            List<Program> forbidden) {
-        Either<Pair<Program, Map<Parameter, Constant>>, Node> result = synthesizeExt(testSuite, components, forbidden);
-        if (result.isRight())
-            return Optional.empty();
-
-        return Optional.of(Traverse.substitute(result.left().value().getLeft().getSemantics(), result.left().value().getRight()));
-    }
-
-
 
     private List<Node> testToConstraint(TestCase testCase, BranchOutput output) {
         List<Node> clauses = new ArrayList<>();

@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 /**
  * Created by Sergey Mechtaev on 7/4/2016.
  */
-public class CODIS extends Synthesis {
+public class CODIS extends SynthesisWithLearning {
 
     private Logger logger = LoggerFactory.getLogger(CEGIS.class);
 
@@ -25,11 +25,12 @@ public class CODIS extends Synthesis {
     private List<Triple<Node, TestCase, Map<Integer, Node>>> path;
     private int bound;
     private Tester tester;
+    private InterpolatingSolver iSolver;
 
-
-    public CODIS(Solver solver, int bound) {
+    public CODIS(Solver solver, InterpolatingSolver iSolver, int bound) {
         this.bound = bound;
         this.tester = new Tester(solver);
+        this.iSolver = iSolver;
     }
 
     public static List<Component> getLeaves(Program p) {
@@ -116,11 +117,11 @@ public class CODIS extends Synthesis {
      * 4. Current procedure is not exhaustive
      */
     @Override
-    public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,
-                                                                        Multiset<Node> components) {
+    public Either<Pair<Program, Map<Parameter, Constant>>, Node> synthesizeOrLearn(List<TestCase> testSuite,
+                                                                             Multiset<Node> components) {
         List<Component> flattenedComponents = components.stream().map(Component::new).collect(Collectors.toList());
         conflicts = new HashMap<>();
-        TreeBoundedSynthesis synthesizer = new TreeBoundedSynthesis(Z3.getInstance(), bound, true);
+        TreeBoundedSynthesis synthesizer = new TreeBoundedSynthesis(iSolver, bound, true);
         List<TestCase> initialTestSuite = new ArrayList<>();
         initialTestSuite.add(testSuite.get(0));
         Pair<Program, Map<Parameter, Constant>> initial = synthesizer.synthesize(initialTestSuite, components).get();
@@ -129,10 +130,10 @@ public class CODIS extends Synthesis {
         return expand(initial, components, testSuite, fixed);
     }
 
-    public Optional<Pair<Program, Map<Parameter, Constant>>> expand(Pair<Program, Map<Parameter, Constant>> last,
-                                                                    Multiset<Node> components,
-                                                                    List<TestCase> testSuite,
-                                                                    List<TestCase> fixed) {
+    public Either<Pair<Program, Map<Parameter, Constant>>, Node> expand(Pair<Program, Map<Parameter, Constant>> last,
+                                                                        Multiset<Node> components,
+                                                                        List<TestCase> testSuite,
+                                                                        List<TestCase> fixed) {
         List<TestCase> failing = new ArrayList<>();
         for (TestCase testCase : testSuite) {
             if (!tester.isPassing(last.getLeft(), last.getRight(), testCase)) {
@@ -142,36 +143,36 @@ public class CODIS extends Synthesis {
         logger.info("Current program: " + last.getLeft().getSemantics(last.getRight()));
         logger.info("Fixed/Failing/Total: " + fixed.size() + "/" + failing.size() + "/" + testSuite.size());
         if (failing.isEmpty()) {
-            return Optional.of(last);
+            return Either.left(last);
         }
         for (Component leaf : getLeaves(last.getLeft())) {
-            Optional<Pair<Program, Map<Parameter, Constant>>> result =
+            Either<Pair<Program, Map<Parameter, Constant>>, Node> result =
                     expandLeaf(last, leaf, components, testSuite, fixed, failing);
-            if (result.isPresent()) {
+            if (result.isLeft()) {
                 return result;
             }
         }
-        return Optional.empty();
+        return Either.right(new ProgramVariable("<unknown>", testSuite.get(0).getOutputType()));
     }
 
-    public Optional<Pair<Program, Map<Parameter, Constant>>> expandLeaf(Pair<Program, Map<Parameter, Constant>> last,
-                                                                        Component leaf,
-                                                                        Multiset<Node> components,
-                                                                        List<TestCase> testSuite,
-                                                                        List<TestCase> fixed,
-                                                                        List<TestCase> failing) {
+    public Either<Pair<Program, Map<Parameter, Constant>>, Node> expandLeaf(Pair<Program, Map<Parameter, Constant>> last,
+                                                                            Component leaf,
+                                                                            Multiset<Node> components,
+                                                                            List<TestCase> testSuite,
+                                                                            List<TestCase> fixed,
+                                                                            List<TestCase> failing) {
         Multiset<Node> remaining = remainingComponents(components, last.getLeft(), leaf);
         for (TestCase failingTest : failing) {
-            Optional<Pair<Program, Map<Parameter, Constant>>> result =
+            Either<Pair<Program, Map<Parameter, Constant>>, Node> result =
                     expandLeafForTest(last, leaf, remaining, testSuite, fixed, failingTest);
-            if (result.isPresent()) {
+            if (result.isLeft()) {
                 return result;
             }
         }
-        return Optional.empty();
+        return Either.right(new ProgramVariable("<unknown>", testSuite.get(0).getOutputType()));
     }
 
-    public Optional<Pair<Program, Map<Parameter, Constant>>> expandLeafForTest(Pair<Program, Map<Parameter, Constant>> last,
+    public Either<Pair<Program, Map<Parameter, Constant>>, Node> expandLeafForTest(Pair<Program, Map<Parameter, Constant>> last,
                                                                                Component leaf,
                                                                                Multiset<Node> components,
                                                                                List<TestCase> testSuite,
@@ -184,13 +185,12 @@ public class CODIS extends Synthesis {
         for (TestCase testCase : newFixed) {
             contextTestSuite.add(new SynthesisContext(testCase, last, leaf));
         }
-        TreeBoundedSynthesis synthesizer = new TreeBoundedSynthesis(Z3.getInstance(), bound, true);
-        List<Program> forbidden = new ArrayList<>();
+        TreeBoundedSynthesis synthesizer = new TreeBoundedSynthesis(iSolver, bound, true);
         Either<Pair<Program, Map<Parameter, Constant>>, Node> result =
-                synthesizer.synthesizeExt(contextTestSuite, components, forbidden);
+                synthesizer.synthesizeOrLearn(contextTestSuite, components);
         if (result.isRight()) {
             conflicts.put(components, result.right().value());
-            return Optional.empty();
+            return result;
         }
         Map<Parameter, Constant> newParameterValuation = new HashMap<>();
         newParameterValuation.putAll(last.getRight());

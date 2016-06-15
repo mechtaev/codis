@@ -2,6 +2,7 @@ package sg.edu.nus.comp.codis;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.*;
 import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.*;
@@ -26,9 +27,10 @@ public class TestCBS {
 
     @BeforeClass
     public static void initSolver() {
-        intSynthesizer = new CBS(Z3.getInstance(), false, Optional.empty());
-        boundIntSynthesizer = new CBS(Z3.getInstance(), false, Optional.of(0));
-        bvSynthesizer = new CBS(Z3.getInstance(), true, Optional.empty());
+        Solver solver = Z3.buildSolver();
+        intSynthesizer = new ComponentBasedSynthesis(solver, false, Optional.empty());
+        boundIntSynthesizer = new ComponentBasedSynthesis(solver, false, Optional.of(0));
+        bvSynthesizer = new ComponentBasedSynthesis(solver, true, Optional.empty());
     }
 
     private final ProgramVariable x = ProgramVariable.mkInt("x");
@@ -53,9 +55,10 @@ public class TestCBS {
         assignment2.put(y, IntConst.of(2));
         testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(1)));
 
-        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, components);
-        assertTrue(node.isPresent());
-        assertEquals(node.get(), x);
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = intSynthesizer.synthesize(testSuite, components);
+        assertTrue(result.isPresent());
+        Node node = result.get().getLeft().getSemantics(result.get().getRight());
+        assertEquals(node, x);
     }
 
     @Test
@@ -76,10 +79,10 @@ public class TestCBS {
         assignment2.put(y, IntConst.of(2));
         testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(3)));
 
-        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, components);
-        assertTrue(node.isPresent());
-        Optional<Node> boundNode = boundIntSynthesizer.synthesizeNode(testSuite, components);
-        assertTrue(!boundNode.isPresent());
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = intSynthesizer.synthesize(testSuite, components);
+        assertTrue(result.isPresent());
+        Optional<Pair<Program, Map<Parameter, Constant>>> boundedResult = boundIntSynthesizer.synthesize(testSuite, components);
+        assertFalse(boundedResult.isPresent());
     }
 
     @Test
@@ -101,9 +104,10 @@ public class TestCBS {
         assignment2.put(y, IntConst.of(2));
         testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(3)));
 
-        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, components);
-        assertTrue(node.isPresent());
-        assertTrue(node.get().equals(new Add(x, y)) || node.get().equals(new Add(y, x)));
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = intSynthesizer.synthesize(testSuite, components);
+        assertTrue(result.isPresent());
+        Node node = result.get().getLeft().getSemantics(result.get().getRight());
+        assertTrue(node.equals(new Add(x, y)) || node.equals(new Add(y, x)));
     }
 
     @Test
@@ -130,9 +134,10 @@ public class TestCBS {
         assignment3.put(y, IntConst.of(1));
         testSuite.add(TestCase.ofAssignment(assignment3, BoolConst.FALSE));
 
-        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, components);
-        assertTrue(node.isPresent());
-        assertEquals(node.get(), new Greater(x, y));
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = intSynthesizer.synthesize(testSuite, components);
+        assertTrue(result.isPresent());
+        Node node = result.get().getLeft().getSemantics(result.get().getRight());
+        assertEquals(node, new Greater(x, y));
     }
 
     @Test
@@ -161,9 +166,10 @@ public class TestCBS {
         assignment3.put(y, IntConst.of(1));
         testSuite.add(TestCase.ofAssignment(assignment3, IntConst.of(0)));
 
-        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, components);
-        assertTrue(node.isPresent());
-        assertEquals(node.get(), new ITE(new Greater(x, y), IntConst.of(1), IntConst.of(0)));
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = intSynthesizer.synthesize(testSuite, components);
+        assertTrue(result.isPresent());
+        Node node = result.get().getLeft().getSemantics(result.get().getRight());
+        assertEquals(node, new ITE(new Greater(x, y), IntConst.of(1), IntConst.of(0)));
     }
 
     @Test
@@ -177,8 +183,8 @@ public class TestCBS {
         assignment1.put(x, IntConst.of(1));
         testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(-1)));
 
-        Optional<Node> node = intSynthesizer.synthesizeNode(testSuite, components);
-        assertFalse(node.isPresent());
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = intSynthesizer.synthesize(testSuite, components);
+        assertFalse(result.isPresent());
     }
 
     @Test
@@ -205,9 +211,10 @@ public class TestCBS {
         assignment3.put(bvY, BVConst.ofLong(1, 32));
         testSuite.add(TestCase.ofAssignment(assignment3, BoolConst.FALSE));
 
-        Optional<Node> node = bvSynthesizer.synthesizeNode(testSuite, components);
-        assertTrue(node.isPresent());
-        assertEquals(node.get(), new BVUnsignedGreater(bvX, bvY));
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = bvSynthesizer.synthesize(testSuite, components);
+        assertTrue(result.isPresent());
+        Node node = result.get().getLeft().getSemantics(result.get().getRight());
+        assertEquals(node, new BVUnsignedGreater(bvX, bvY));
     }
 
 }

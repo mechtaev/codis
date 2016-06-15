@@ -19,7 +19,7 @@ public class TestEvaluator {
 
     @BeforeClass
     public static void initSolver() {
-        evaluator = new Evaluator(Z3.getInstance());
+        evaluator = new Evaluator(Z3.buildSolver());
     }
 
 

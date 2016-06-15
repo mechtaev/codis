@@ -19,9 +19,7 @@ import java.util.stream.Collectors;
 /**
  * Created by Sergey Mechtaev on 7/4/2016.
  */
-public class Z3 implements Solver {
-
-    private static final Z3 INSTANCE = new Z3();
+public class Z3 implements Solver, InterpolatingSolver {
 
     private Logger logger = LoggerFactory.getLogger(Z3.class);
 
@@ -31,24 +29,27 @@ public class Z3 implements Solver {
     private InterpolationContext globalIContext;
     private com.microsoft.z3.Solver iSolver;
 
-    private Z3() {
-        if (INSTANCE != null) {
-            throw new IllegalStateException("Already instantiated");
+    private Z3(boolean interpolating) {
+        if (!interpolating) {
+            HashMap<String, String> cfg = new HashMap<>();
+            cfg.put("model", "true");
+            this.globalContext = new Context(cfg);
+            this.solver = globalContext.mkSolver();
+        } else {
+            HashMap<String, String> icfg = new HashMap<>();
+            icfg.put("model", "true");
+            icfg.put("proof", "true");
+            this.globalIContext = new InterpolationContext(icfg);
+            this.iSolver = globalIContext.mkSolver();
         }
-        HashMap<String, String> cfg = new HashMap<>();
-        cfg.put("model", "true");
-        this.globalContext = new Context(cfg);
-        this.solver = globalContext.mkSolver();
-
-        HashMap<String, String> icfg = new HashMap<>();
-        icfg.put("model", "true");
-        icfg.put("proof", "true");
-        this.globalIContext = new InterpolationContext(icfg);
-        this.iSolver = globalIContext.mkSolver();
     }
 
-    public static Z3 getInstance() {
-        return INSTANCE;
+    public static Solver buildSolver() {
+        return new Z3(false);
+    }
+
+    public static InterpolatingSolver buildInterpolatingSolver() {
+        return new Z3(true);
     }
 
     public void dispose() {

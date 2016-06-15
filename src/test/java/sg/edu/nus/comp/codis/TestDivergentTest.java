@@ -24,7 +24,7 @@ public class TestDivergentTest {
 
     @BeforeClass
     public static void initSolver() {
-        solver = Z3.getInstance();
+        solver = Z3.buildSolver();
         generator = new DivergentTest(solver);
     }
 
