@@ -619,6 +619,26 @@ public class MathSAT implements Solver {
             throw new UnsupportedOperationException();
         }
 
+        @Override
+        public void visit(BVNand bvNand) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVXor bvXor) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVNor bvNor) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(BVXnor bvXnor) {
+            throw new UnsupportedOperationException();
+        }
+
     }
 
 }

@@ -452,6 +452,30 @@ public class Unifier {
             processLeaf(branchOutput);
         }
 
+        @Override
+        public void visit(BVNand bvNand) {
+            if (failed) return;
+            processBinaryOp(bvNand);
+        }
+
+        @Override
+        public void visit(BVXor bvXor) {
+            if (failed) return;
+            processBinaryOp(bvXor);
+        }
+
+        @Override
+        public void visit(BVNor bvNor) {
+            if (failed) return;
+            processBinaryOp(bvNor);
+        }
+
+        @Override
+        public void visit(BVXnor bvXnor) {
+            if (failed) return;
+            processBinaryOp(bvXnor);
+        }
+
     }
 
 

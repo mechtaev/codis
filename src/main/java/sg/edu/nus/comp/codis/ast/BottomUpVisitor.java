@@ -110,4 +110,12 @@ public interface BottomUpVisitor {
     void visit(BVUnsignedShiftRight bvUnsignedShiftRight);
 
     void visit(BranchOutput branchOutput);
+
+    void visit(BVNand bvNand);
+
+    void visit(BVXor bvXor);
+
+    void visit(BVNor bvNor);
+
+    void visit(BVXnor bvXnor);
 }

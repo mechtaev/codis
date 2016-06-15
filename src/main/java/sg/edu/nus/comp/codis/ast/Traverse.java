@@ -313,6 +313,26 @@ public class Traverse {
         public void visit(BranchOutput branchOutput) {
             addIfMatches(branchOutput);
         }
+
+        @Override
+        public void visit(BVNand bvNand) {
+            addIfMatches(bvNand);
+        }
+
+        @Override
+        public void visit(BVXor bvXor) {
+            addIfMatches(bvXor);
+        }
+
+        @Override
+        public void visit(BVNor bvNor) {
+            addIfMatches(bvNor);
+        }
+
+        @Override
+        public void visit(BVXnor bvXnor) {
+            addIfMatches(bvXnor);
+        }
     }
 
     private static class TransformationVisitor implements BottomUpVisitor {
@@ -671,6 +691,34 @@ public class Traverse {
         @Override
         public void visit(BranchOutput branchOutput) {
             nodes.push(function.apply(branchOutput));
+        }
+
+        @Override
+        public void visit(BVNand bvNand) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVNand(left, right)));
+        }
+
+        @Override
+        public void visit(BVXor bvXor) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVXor(left, right)));
+        }
+
+        @Override
+        public void visit(BVNor bvNor) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVNor(left, right)));
+        }
+
+        @Override
+        public void visit(BVXnor bvXnor) {
+            Node right = nodes.pop();
+            Node left = nodes.pop();
+            nodes.push(function.apply(new BVXnor(left, right)));
         }
 
     }

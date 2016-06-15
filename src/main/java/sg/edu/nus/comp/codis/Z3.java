@@ -257,9 +257,97 @@ public class Z3 implements Solver {
         } else if (expr.isITE()) {
             Expr[] args = expr.getArgs();
             return new ITE(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller), convertZ3ToNode(args[2], marshaller));
-        }
 
-        //TODO BV are not supported because we cannot cover all possible Z3 nodes with our AST
+        } else if (expr.isBVAdd()) {
+            Expr[] args = expr.getArgs();
+            return new BVAdd(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVSDiv()) {
+            Expr[] args = expr.getArgs();
+            return new BVSignedDiv(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVUDiv()) {
+            Expr[] args = expr.getArgs();
+            return new BVUnsignedDiv(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVMul()) {
+            Expr[] args = expr.getArgs();
+            return new BVMult(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVSub()) {
+            Expr[] args = expr.getArgs();
+            return new BVSub(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVUMinus()) {
+            Expr[] args = expr.getArgs();
+            return new BVNeg(convertZ3ToNode(args[0], marshaller));
+        } else if (expr.isBVAND()) {
+            Expr[] args = expr.getArgs();
+            return new BVAnd(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVOR()) {
+            Expr[] args = expr.getArgs();
+            return new BVOr(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVNAND()) {
+            Expr[] args = expr.getArgs();
+            return new BVNand(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVXOR()) {
+            Expr[] args = expr.getArgs();
+            return new BVXor(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVXNOR()) {
+            Expr[] args = expr.getArgs();
+            return new BVXnor(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVNOR()) {
+            Expr[] args = expr.getArgs();
+            return new BVNor(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVNOT()) {
+            Expr[] args = expr.getArgs();
+            return new BVNot(convertZ3ToNode(args[0], marshaller));
+
+        } else if (expr.isBVShiftLeft()) {
+            Expr[] args = expr.getArgs();
+            return new BVShiftLeft(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVShiftRightLogical()) {
+            Expr[] args = expr.getArgs();
+            return new BVUnsignedShiftRight(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVShiftRightArithmetic()) {
+            Expr[] args = expr.getArgs();
+            return new BVSignedShiftRight(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVSDiv()) {
+            Expr[] args = expr.getArgs();
+            return new BVSignedDiv(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVUDiv()) {
+            Expr[] args = expr.getArgs();
+            return new BVUnsignedDiv(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVSMod()) {
+            Expr[] args = expr.getArgs();
+            return new BVSignedModulo(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVSRem()) {
+            Expr[] args = expr.getArgs();
+            return new BVSignedRemainder(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVURem()) {
+            Expr[] args = expr.getArgs();
+            return new BVUnsignedRemainder(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+
+        } else if (expr.isBVSGT()) {
+            Expr[] args = expr.getArgs();
+            return new BVSignedGreater(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVUGT()) {
+            Expr[] args = expr.getArgs();
+            return new BVUnsignedGreater(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVSGE()) {
+            Expr[] args = expr.getArgs();
+            return new BVSignedGreaterOrEqual(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVUGE()) {
+            Expr[] args = expr.getArgs();
+            return new BVUnsignedGreaterOrEqual(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVSLT()) {
+            Expr[] args = expr.getArgs();
+            return new BVSignedLess(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVULT()) {
+            Expr[] args = expr.getArgs();
+            return new BVUnsignedLess(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVSLE()) {
+            Expr[] args = expr.getArgs();
+            return new BVSignedLessOrEqual(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        } else if (expr.isBVULE()) {
+            Expr[] args = expr.getArgs();
+            return new BVUnsignedLessOrEqual(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+        }
 
         throw new UnsupportedOperationException("failed to convert Z3 formula: " + expr);
     }
@@ -636,6 +724,34 @@ public class Z3 implements Solver {
         @Override
         public void visit(BranchOutput branchOutput) {
             processVariable(ctx, branchOutput);
+        }
+
+        @Override
+        public void visit(BVNand bvNand) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVNAND(left, right));
+        }
+
+        @Override
+        public void visit(BVXor bvXor) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVXOR(left, right));
+        }
+
+        @Override
+        public void visit(BVNor bvNor) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVNOR(left, right));
+        }
+
+        @Override
+        public void visit(BVXnor bvXnor) {
+            BitVecExpr right = (BitVecExpr) exprs.pop();
+            BitVecExpr left = (BitVecExpr) exprs.pop();
+            exprs.push(ctx.mkBVXNOR(left, right));
         }
 
     }

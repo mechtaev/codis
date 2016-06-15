@@ -592,6 +592,50 @@ public class TypeInference {
             types.push(branchOutput.getType());
         }
 
+        @Override
+        public void visit(BVNand bvNand) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvNand);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVXor bvXor) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvXor);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVNor bvNor) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvNor);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
+        @Override
+        public void visit(BVXnor bvXnor) {
+            if (typeError) return;
+            Optional<BVType> type = checkBVBinaryOpTypes(bvXnor);
+            if (!type.isPresent()) {
+                typeError = true;
+                return;
+            }
+            this.types.push(type.get());
+        }
+
     }
 
 }
