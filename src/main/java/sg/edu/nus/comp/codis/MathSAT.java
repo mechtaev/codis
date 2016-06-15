@@ -130,6 +130,15 @@ public class MathSAT implements Solver, InterpolatingSolver {
         return mathsat.api.msat_make_constant(solver, d);
     }
 
+    private long getBVVarDecl(String name, int size) {
+        return mathsat.api.msat_declare_function(solver, name, mathsat.api.msat_get_bv_type(solver, size));
+    }
+
+    private long getBVVar(String name, int size) {
+        long d = getBVVarDecl(name, size);
+        return mathsat.api.msat_make_constant(solver, d);
+    }
+
     private Map<Variable, Constant> getAssignment(long model, VariableMarshaller marshaller) {
         HashMap<Variable, Constant> assingment = new HashMap<>();
         for (Variable variable: marshaller.getVariables()) {
@@ -155,6 +164,19 @@ public class MathSAT implements Solver, InterpolatingSolver {
                     assingment.put(variable, BoolConst.of(false));
                 } else {
                     throw new RuntimeException("wrong variable type");
+                }
+            } else if (TypeInference.typeOf(variable) instanceof BVType) {
+                int size = ((BVType) TypeInference.typeOf(variable)).getSize();
+                long result = mathsat.api.msat_model_eval(model, getBVVar(marshaller.toString(variable), size));
+                if (mathsat.api.msat_term_is_number(solver, result) != 0) {
+                    String repr = mathsat.api.msat_term_to_number(solver, result);
+                    int index = repr.indexOf('_');
+                    if (index >= 0) {
+                        repr = repr.substring(0, index); //NOTE: this is a workaround
+                    }
+                    assingment.put(variable, BVConst.ofLong(Long.parseLong(repr), size));
+                } else {
+                    throw new RuntimeException("unsupported MathSAT expression type");
                 }
             } else {
                 throw new UnsupportedOperationException();
@@ -305,6 +327,10 @@ public class MathSAT implements Solver, InterpolatingSolver {
             } else if (TypeInference.typeOf(variable).equals(BoolType.TYPE)) {
                 pushExpr(getBoolVar(marshaller.toString(variable)));
                 decls.add(getBoolVarDecl(marshaller.toString(variable)));
+            }else if (TypeInference.typeOf(variable) instanceof BVType) {
+                int size = ((BVType) TypeInference.typeOf(variable)).getSize();
+                pushExpr(getBVVar(marshaller.toString(variable), size));
+                decls.add(getBVVarDecl(marshaller.toString(variable), size));
             } else {
                 throw new UnsupportedOperationException();
             }
@@ -479,6 +505,11 @@ public class MathSAT implements Solver, InterpolatingSolver {
         }
 
         @Override
+        public void visit(BranchOutput branchOutput) {
+            processVariable(branchOutput);
+        }
+
+        @Override
         public void visit(ITE ite) {
             long elseBranch = exprs.pop();
             long thenBranch = exprs.pop();
@@ -493,146 +524,197 @@ public class MathSAT implements Solver, InterpolatingSolver {
 
         @Override
         public void visit(BVConst bvConst) {
-            throw new UnsupportedOperationException();
+            long value = bvConst.getLong();
+            String repr;
+            if (value < 0) {
+                pushExpr(mathsat.api.msat_make_bv_neg(solver,
+                        mathsat.api.msat_make_bv_number(solver, Long.toString(-value), bvConst.getType().getSize(), 10)));
+            } else {
+                pushExpr(mathsat.api.msat_make_bv_number(solver, Long.toString(value), bvConst.getType().getSize(), 10));
+            }
         }
 
         @Override
         public void visit(BVAdd bvAdd) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_plus(solver, left, right));
         }
 
         @Override
         public void visit(BVAnd bvAnd) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_and(solver, left, right));
         }
 
         @Override
         public void visit(BVMult bvMult) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_times(solver, left, right));
         }
 
         @Override
         public void visit(BVNeg bvNeg) {
-            throw new UnsupportedOperationException();
+            long arg = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_neg(solver, arg));
         }
 
         @Override
         public void visit(BVNot bvNot) {
-            throw new UnsupportedOperationException();
+            long arg = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_not(solver, arg));
         }
 
         @Override
         public void visit(BVOr bvOr) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_or(solver, left, right));
         }
 
         @Override
         public void visit(BVShiftLeft bvShiftLeft) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_lshl(solver, left, right));
         }
 
         @Override
         public void visit(BVSignedDiv bvSignedDiv) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_sdiv(solver, left, right));
         }
 
         @Override
         public void visit(BVSignedGreater bvSignedGreater) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_slt(solver, right, left)); //NOTE: change order
         }
 
         @Override
         public void visit(BVSignedGreaterOrEqual bvSignedGreaterOrEqual) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_sleq(solver, right, left)); //NOTE: change order
         }
 
         @Override
         public void visit(BVSignedLess bvSignedLess) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_slt(solver, left, right));
         }
 
         @Override
         public void visit(BVSignedLessOrEqual bvSignedLessOrEqual) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_sleq(solver, left, right));
         }
 
         @Override
         public void visit(BVSignedModulo bvSignedModulo) {
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException(); // FIXME: not available in MathSAT API
         }
 
         @Override
         public void visit(BVSignedRemainder bvSignedRemainder) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_srem(solver, left, right));
         }
 
         @Override
         public void visit(BVSignedShiftRight bvSignedShiftRight) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_ashr(solver, left, right));
         }
 
         @Override
         public void visit(BVSub bvSub) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_minus(solver, left, right));
         }
 
         @Override
         public void visit(BVUnsignedDiv bvUnsignedDiv) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_udiv(solver, left, right));
         }
 
         @Override
         public void visit(BVUnsignedGreater bvUnsignedGreater) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_ult(solver, right, left)); //NOTE: change order
         }
 
         @Override
         public void visit(BVUnsignedGreaterOrEqual bvUnsignedGreaterOrEqual) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_uleq(solver, right, left)); //NOTE: change order
         }
 
         @Override
         public void visit(BVUnsignedLess bvUnsignedLess) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_ult(solver, left, right));
         }
 
         @Override
         public void visit(BVUnsignedLessOrEqual bvUnsignedLessOrEqual) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_uleq(solver, left, right));
         }
 
         @Override
         public void visit(BVUnsignedRemainder bvUnsignedRemainder) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_urem(solver, left, right));
         }
 
         @Override
         public void visit(BVUnsignedShiftRight bvUnsignedShiftRight) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void visit(BranchOutput branchOutput) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_lshr(solver, left, right));
         }
 
         @Override
         public void visit(BVNand bvNand) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_not(solver, mathsat.api.msat_make_bv_and(solver, left, right)));
         }
 
         @Override
         public void visit(BVXor bvXor) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_xor(solver, left, right));
         }
 
         @Override
         public void visit(BVNor bvNor) {
-            throw new UnsupportedOperationException();
+            long right = exprs.pop();
+            long left = exprs.pop();
+            pushExpr(mathsat.api.msat_make_bv_not(solver, mathsat.api.msat_make_bv_or(solver, left, right)));
         }
 
         @Override
         public void visit(BVXnor bvXnor) {
+            //TODO: (bvxnor s t) abbreviates (bvor (bvand s t) (bvand (bvnot s) (bvnot t)))
             throw new UnsupportedOperationException();
         }
 

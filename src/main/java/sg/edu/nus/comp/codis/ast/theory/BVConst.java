@@ -37,6 +37,10 @@ public class BVConst extends Constant {
         return value;
     }
 
+    public String getString() {
+        return Long.toString(value);
+    }
+
     public boolean getBoolean() {
         return value != 0;
     }

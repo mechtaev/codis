@@ -243,8 +243,8 @@ public class Z3 implements Solver, InterpolatingSolver {
             Expr[] args = expr.getArgs();
             return new LessOrEqual(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
         } else if (expr.isEq()) {
-                Expr[] args = expr.getArgs();
-                return new Equal(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
+            Expr[] args = expr.getArgs();
+            return new Equal(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
         } else if (expr.isUMinus()) {
             Expr[] args = expr.getArgs();
             return new Minus(convertZ3ToNode(args[0], marshaller));
@@ -259,6 +259,9 @@ public class Z3 implements Solver, InterpolatingSolver {
             Expr[] args = expr.getArgs();
             return new ITE(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller), convertZ3ToNode(args[2], marshaller));
 
+        } else if (expr.isBVNumeral()) {
+            BitVecNum num = (BitVecNum)expr;
+            return BVConst.ofLong(num.getLong(), num.getSortSize());
         } else if (expr.isBVAdd()) {
             Expr[] args = expr.getArgs();
             return new BVAdd(convertZ3ToNode(args[0], marshaller), convertZ3ToNode(args[1], marshaller));
