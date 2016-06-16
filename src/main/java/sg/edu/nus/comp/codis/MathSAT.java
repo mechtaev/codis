@@ -261,7 +261,8 @@ public class MathSAT implements Solver, InterpolatingSolver {
             NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
             leftClause.accept(visitor);
             //decls.addAll(visitor.getDecls());
-            mathsat.api.msat_assert_formula(solver, visitor.getExpr());
+            int error = mathsat.api.msat_assert_formula(solver, visitor.getExpr());
+            assert (error == 0);
         }
 
         mathsat.api.msat_set_itp_group(solver, groupB);
@@ -269,7 +270,8 @@ public class MathSAT implements Solver, InterpolatingSolver {
             NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
             rightClause.accept(visitor);
             //decls.addAll(visitor.getDecls());
-            mathsat.api.msat_assert_formula(solver, visitor.getExpr());
+            int error = mathsat.api.msat_assert_formula(solver, visitor.getExpr());
+            assert (error == 0);
         }
 
         int status = mathsat.api.msat_solve(solver);
@@ -288,12 +290,11 @@ public class MathSAT implements Solver, InterpolatingSolver {
         } else {
             int[] groupsOfA = {groupA};
             long interpolant = mathsat.api.msat_get_interpolant(solver, groupsOfA, 1);
-            assert(!mathsat.api.MSAT_ERROR_TERM(interpolant));
-            String s = mathsat.api.msat_to_smtlib2_term(solver, interpolant);
-            System.out.println("\nOK, the interpolant is: " + s);
-
-            //TODO convert to Node
-            throw new UnsupportedOperationException();
+            assert (!mathsat.api.MSAT_ERROR_TERM(interpolant));
+            //String s = mathsat.api.msat_to_smtlib2_term(solver, interpolant);
+            //System.out.println("\nOK, the interpolant is: " + s);
+            //TODO: convert to Node
+            return Either.right(new ProgramVariable("<unknown>", IntType.TYPE));
         }
 
     }

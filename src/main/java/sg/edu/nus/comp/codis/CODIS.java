@@ -118,13 +118,12 @@ public class CODIS extends SynthesisWithLearning {
      */
     @Override
     public Either<Pair<Program, Map<Parameter, Constant>>, Node> synthesizeOrLearn(List<TestCase> testSuite,
-                                                                             Multiset<Node> components) {
-        List<Component> flattenedComponents = components.stream().map(Component::new).collect(Collectors.toList());
+                                                                                   Multiset<Node> components) {
         conflicts = new HashMap<>();
-        TreeBoundedSynthesis synthesizer = new TreeBoundedSynthesis(iSolver, bound, true);
+        TreeBoundedSynthesis initialSynthesizer = new TreeBoundedSynthesis(iSolver, 1, true);
         List<TestCase> initialTestSuite = new ArrayList<>();
         initialTestSuite.add(testSuite.get(0));
-        Pair<Program, Map<Parameter, Constant>> initial = synthesizer.synthesize(initialTestSuite, components).get();
+        Pair<Program, Map<Parameter, Constant>> initial = initialSynthesizer.synthesize(initialTestSuite, components).get();
         List<TestCase> fixed = new ArrayList<>();
         fixed.add(testSuite.get(0));
         return expand(initial, components, testSuite, fixed);
@@ -192,6 +191,7 @@ public class CODIS extends SynthesisWithLearning {
             conflicts.put(components, result.right().value());
             return result;
         }
+
         Map<Parameter, Constant> newParameterValuation = new HashMap<>();
         newParameterValuation.putAll(last.getRight());
         newParameterValuation.putAll(result.left().value().getRight());
@@ -199,6 +199,12 @@ public class CODIS extends SynthesisWithLearning {
         Map<Component, Program> mapping = new HashMap<>();
         mapping.put(leaf, result.left().value().getLeft());
         Program newProgram = substitute(last.getLeft(), mapping);
+
+        for (TestCase testCase : newFixed) {
+            if (!tester.isPassing(newProgram, newParameterValuation, testCase)) {
+                logger.error("Wrong expansion");
+            }
+        }
 
         return expand(new ImmutablePair<>(newProgram, newParameterValuation), components, testSuite, newFixed);
     }
