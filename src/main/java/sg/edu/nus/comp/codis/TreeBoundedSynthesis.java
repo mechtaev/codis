@@ -138,7 +138,7 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
             Map<Hole, List<List<Selector>>> subnodeForbiddenSelectors = new HashMap<>();
             for (Component component : functionComponents) {
                 boolean infeasibleComponent = false;
-                Set<BranchOutput> children = new HashSet<>(lazyChildren);
+                List<BranchOutput> children = new ArrayList<>(lazyChildren);
                 Map<Hole, Node> args = new HashMap<>();
                 for (Hole input : component.getInputs()) {
                     Optional<BranchOutput> child = children.stream().filter(o -> o.getType().equals(input.getType())).findFirst();
