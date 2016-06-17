@@ -117,4 +117,10 @@ public interface TopDownVisitor {
     void visit(BVNor bvNor);
 
     void visit(BVXnor bvXnor);
+
+    void visit(ProgramOutput programOutput);
+
+    void visit(Dummy dummy);
+
+    void visit(Indexed indexed);
 }

@@ -42,8 +42,17 @@ public abstract class TestCase {
 
     }
 
+    private String id = null;
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
     @Override
     public String toString() {
+        if (id != null) {
+            return id;
+        }
         String repr = "{ ";
         for (Node clause : this.getConstraints(new ProgramVariable("output", this.getOutputType()))) {
             repr += clause + " ";

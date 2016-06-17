@@ -18,7 +18,7 @@ public class Tester {
     }
 
     public boolean isPassing(Program program, Map<Parameter, Constant> parameterValuation, TestCase test) {
-        ProgramVariable result = new ProgramVariable("<testResult>", test.getOutputType());
+        Variable result = new ProgramOutput(test.getOutputType());
         List<Node> clauses = test.getConstraints(result);
         clauses.add(new Equal(program.getSemantics(parameterValuation), result));
         return solver.getModel(clauses).isPresent();

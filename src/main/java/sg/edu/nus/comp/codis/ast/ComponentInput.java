@@ -4,7 +4,7 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 /**
- * Created by Sergey Mechtaev on 7/4/2016.
+ * Variable used in CBS. Test-instantiated.
  */
 public class ComponentInput extends Variable {
 
@@ -62,4 +62,8 @@ public class ComponentInput extends Variable {
         return "ci(" + hole + "->" + component + ")";
     }
 
+    @Override
+    public Type getType() {
+        return hole.getType();
+    }
 }

@@ -1,22 +1,17 @@
 package sg.edu.nus.comp.codis.ast;
 
 /**
- * Created by Sergey Mechtaev on 2/5/2016.
- *
- * Used by bounded synthesis. Defines physical equality. Test-instantiated
+ * Variable that implements physical equality
  */
-public class BranchOutput extends Variable {
-
+public class Dummy extends Variable {
     private Type type;
 
     public Type getType() {
         return type;
     }
 
-    public BranchOutput(Type type) {
+    public Dummy(Type type) {
         this.type = type;
-        objectCounter = classCounter;
-        classCounter++;
     }
 
     @Override
@@ -29,12 +24,9 @@ public class BranchOutput extends Variable {
         visitor.visit(this);
     }
 
-    private static int classCounter = 0;
-    private int objectCounter;
-
     @Override
     public String toString() {
-        return "Branch" + objectCounter;
+        return "Dummy";
     }
 
 }

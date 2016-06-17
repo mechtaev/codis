@@ -636,6 +636,24 @@ public class TypeInference {
             this.types.push(type.get());
         }
 
+        @Override
+        public void visit(ProgramOutput programOutput) {
+            if (typeError) return;
+            types.push(programOutput.getType());
+        }
+
+        @Override
+        public void visit(Dummy dummy) {
+            if (typeError) return;
+            types.push(dummy.getType());
+        }
+
+        @Override
+        public void visit(Indexed indexed) {
+            if (typeError) return;
+            types.push(indexed.getType());
+        }
+
     }
 
 }

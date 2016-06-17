@@ -188,6 +188,7 @@ public class CODIS extends SynthesisWithLearning {
         Either<Pair<Program, Map<Parameter, Constant>>, Node> result =
                 synthesizer.synthesizeOrLearn(contextTestSuite, components);
         if (result.isRight()) {
+            //logger.info("Learned conflict: " + result.right().value());
             conflicts.put(components, result.right().value());
             return result;
         }

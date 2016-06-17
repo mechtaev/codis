@@ -295,6 +295,8 @@ public class MathSAT implements Solver, InterpolatingSolver {
             int[] groupsOfA = {groupA};
             long interpolant = mathsat.api.msat_get_interpolant(solver, groupsOfA, 1);
             assert (!mathsat.api.MSAT_ERROR_TERM(interpolant));
+//            String s = mathsat.api.msat_to_smtlib2_term(solver, interpolant);
+//            System.out.println("\nOK, the interpolant is: " + s);
             //TODO: convert to Node
             //return Either.right(convertMathSATToNode(solver, interpolant, marshaller));
             return Either.right(ProgramVariable.mkBool("<unknown>"));
@@ -650,7 +652,6 @@ public class MathSAT implements Solver, InterpolatingSolver {
         @Override
         public void visit(BVConst bvConst) {
             long value = bvConst.getLong();
-            String repr;
             if (value < 0) {
                 pushExpr(mathsat.api.msat_make_bv_neg(solver,
                         mathsat.api.msat_make_bv_number(solver, Long.toString(-value), bvConst.getType().getSize(), 10)));
@@ -841,6 +842,21 @@ public class MathSAT implements Solver, InterpolatingSolver {
         public void visit(BVXnor bvXnor) {
             //TODO: (bvxnor s t) abbreviates (bvor (bvand s t) (bvand (bvnot s) (bvnot t)))
             throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void visit(ProgramOutput programOutput) {
+            processVariable(programOutput);
+        }
+
+        @Override
+        public void visit(Dummy dummy) {
+            processVariable(dummy);
+        }
+
+        @Override
+        public void visit(Indexed indexed) {
+            processVariable(indexed);
         }
 
     }

@@ -34,4 +34,9 @@ public class Selector extends Variable {
     public String toString() {
         return "Selector" + objectCounter;
     }
+
+    @Override
+    public Type getType() {
+        return BoolType.TYPE;
+    }
 }

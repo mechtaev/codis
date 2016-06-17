@@ -758,6 +758,21 @@ public class Z3 implements Solver, InterpolatingSolver {
             exprs.push(ctx.mkBVXNOR(left, right));
         }
 
+        @Override
+        public void visit(ProgramOutput programOutput) {
+            processVariable(ctx, programOutput);
+        }
+
+        @Override
+        public void visit(Dummy dummy) {
+            processVariable(ctx, dummy);
+        }
+
+        @Override
+        public void visit(Indexed indexed) {
+            processVariable(ctx, indexed);
+        }
+
     }
 
 }

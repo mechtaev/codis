@@ -476,6 +476,24 @@ public class Unifier {
             processBinaryOp(bvXnor);
         }
 
+        @Override
+        public void visit(ProgramOutput programOutput) {
+            if (failed) return;
+            processLeaf(programOutput);
+        }
+
+        @Override
+        public void visit(Dummy dummy) {
+            if (failed) return;
+            processLeaf(dummy);
+        }
+
+        @Override
+        public void visit(Indexed indexed) {
+            if (failed) return;
+            processLeaf(indexed);
+        }
+
     }
 
 

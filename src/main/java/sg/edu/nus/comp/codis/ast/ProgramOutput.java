@@ -1,11 +1,9 @@
 package sg.edu.nus.comp.codis.ast;
 
 /**
- * Created by Sergey Mechtaev on 2/5/2016.
- *
- * Used by bounded synthesis. Defines physical equality. Test-instantiated
+ * Variable used for CODIS, conflict learning, evaluation. Test-instantiated. Physical equality.
  */
-public class BranchOutput extends Variable {
+public class ProgramOutput extends Variable {
 
     private Type type;
 
@@ -13,10 +11,8 @@ public class BranchOutput extends Variable {
         return type;
     }
 
-    public BranchOutput(Type type) {
+    public ProgramOutput(Type type) {
         this.type = type;
-        objectCounter = classCounter;
-        classCounter++;
     }
 
     @Override
@@ -29,12 +25,9 @@ public class BranchOutput extends Variable {
         visitor.visit(this);
     }
 
-    private static int classCounter = 0;
-    private int objectCounter;
-
     @Override
     public String toString() {
-        return "Branch" + objectCounter;
+        return "Output";
     }
 
 }
