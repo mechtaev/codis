@@ -192,6 +192,9 @@ public class CODIS extends SynthesisWithLearning {
             return result;
         }
 
+        //logger.info("Base program: " + last.getLeft().getSemantics(last.getRight()));
+        //logger.info("Leaf: " + leaf);
+
         Map<Parameter, Constant> newParameterValuation = new HashMap<>();
         newParameterValuation.putAll(last.getRight());
         newParameterValuation.putAll(result.left().value().getRight());

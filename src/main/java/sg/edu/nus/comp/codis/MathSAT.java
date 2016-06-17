@@ -169,12 +169,7 @@ public class MathSAT implements Solver, InterpolatingSolver {
                 int size = ((BVType) TypeInference.typeOf(variable)).getSize();
                 long result = mathsat.api.msat_model_eval(model, getBVVar(marshaller.toString(variable), size));
                 if (mathsat.api.msat_term_is_number(solver, result) != 0) {
-                    String repr = mathsat.api.msat_term_to_number(solver, result);
-                    int index = repr.indexOf('_');
-                    if (index >= 0) {
-                        repr = repr.substring(0, index); //NOTE: this is a workaround
-                    }
-                    assingment.put(variable, BVConst.ofLong(Long.parseLong(repr), size));
+                    assingment.put(variable, BVConst.ofLong(convertMathSATNumeral(solver, result), size));
                 } else {
                     throw new RuntimeException("unsupported MathSAT expression type");
                 }
@@ -183,6 +178,15 @@ public class MathSAT implements Solver, InterpolatingSolver {
             }
         }
         return assingment;
+    }
+
+    private Long convertMathSATNumeral(long solver, long result) {
+        String repr = mathsat.api.msat_term_to_number(solver, result);
+        int index = repr.indexOf('_');
+        if (index >= 0) {
+            repr = repr.substring(0, index); //NOTE: this is a workaround for bv
+        }
+        return Long.parseLong(repr);
     }
 
     @Override
@@ -291,13 +295,133 @@ public class MathSAT implements Solver, InterpolatingSolver {
             int[] groupsOfA = {groupA};
             long interpolant = mathsat.api.msat_get_interpolant(solver, groupsOfA, 1);
             assert (!mathsat.api.MSAT_ERROR_TERM(interpolant));
-            //String s = mathsat.api.msat_to_smtlib2_term(solver, interpolant);
-            //System.out.println("\nOK, the interpolant is: " + s);
             //TODO: convert to Node
-            return Either.right(new ProgramVariable("<unknown>", IntType.TYPE));
+            //return Either.right(convertMathSATToNode(solver, interpolant, marshaller));
+            return Either.right(ProgramVariable.mkBool("<unknown>"));
         }
 
     }
+
+    private long[] getArgs(long expr) {
+        int arity = mathsat.api.msat_term_arity(expr);
+        long[] args = new long[arity];
+        for (int i=0; i<arity; i++) {
+            args[i] = mathsat.api.msat_term_get_arg(expr, i);
+        }
+        return args;
+    }
+
+    private Node convertMathSATToNode(long solver, long expr, VariableMarshaller marshaller) {
+        int[] sizeAux = new int[1];
+        if (mathsat.api.msat_term_is_plus(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new Add(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_times(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new Mult(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_and(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new And(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_or(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new Or(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_iff(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new Iff(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_leq(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new LessOrEqual(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_equal(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new Equal(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_not(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new Not(convertMathSATToNode(solver, args[0], marshaller));
+        } else if (mathsat.api.msat_term_is_number(solver, expr) != 0
+                && mathsat.api.msat_is_integer_type(solver, mathsat.api.msat_term_get_type(expr)) != 0) {
+            return IntConst.of(Math.toIntExact(convertMathSATNumeral(solver, expr)));
+        } else if (mathsat.api.msat_term_is_constant(solver, expr) != 0) {
+            return marshaller.toVariable(mathsat.api.msat_decl_get_name(mathsat.api.msat_term_get_decl(expr)));
+        } else if (mathsat.api.msat_term_is_true(solver, expr) != 0) {
+            return BoolConst.of(true);
+        } else if (mathsat.api.msat_term_is_false(solver, expr) != 0) {
+            return BoolConst.of(false);
+        } else if (mathsat.api.msat_term_is_term_ite(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new ITE(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller), convertMathSATToNode(solver, args[2], marshaller));
+        } else if (mathsat.api.msat_term_is_number(solver, expr) != 0
+                && mathsat.api.msat_is_bv_type(solver, mathsat.api.msat_term_get_type(expr), null) != 0) {
+            return BVConst.ofLong(convertMathSATNumeral(solver, expr), sizeAux[0]);
+        } else if (mathsat.api.msat_term_is_bv_plus(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVAdd(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_bv_sdiv(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVSignedDiv(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_bv_udiv(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVUnsignedDiv(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_bv_times(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVMult(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_bv_minus(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVSub(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_bv_neg(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVNeg(convertMathSATToNode(solver, args[0], marshaller));
+        } else if (mathsat.api.msat_term_is_bv_and(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVAnd(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_bv_or(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVOr(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_bv_xor(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVXor(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_bv_not(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVNot(convertMathSATToNode(solver, args[0], marshaller));
+
+        } else if (mathsat.api.msat_term_is_bv_lshl(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVShiftLeft(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_bv_lshr(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVUnsignedShiftRight(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_bv_ashr(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVSignedShiftRight(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_bv_sdiv(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVSignedDiv(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_bv_udiv(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVUnsignedDiv(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_bv_srem(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVSignedRemainder(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_bv_urem(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVUnsignedRemainder(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+
+        } else if (mathsat.api.msat_term_is_bv_slt(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVSignedLess(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_bv_ult(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVUnsignedLess(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_bv_sleq(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVSignedLessOrEqual(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        } else if (mathsat.api.msat_term_is_bv_uleq(solver, expr) != 0) {
+            long[] args = getArgs(expr);
+            return new BVUnsignedLessOrEqual(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+        }
+
+        throw new UnsupportedOperationException("failed to convert MathSAT formula: " + mathsat.api.msat_to_smtlib2_term(solver, expr));
+    }
+
 
     private class NodeTranslatorVisitor implements BottomUpVisitor {
 
