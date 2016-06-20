@@ -18,6 +18,11 @@ public class ProgramVariable extends Variable {
         return type;
     }
 
+    @Override
+    public boolean isTestInstantiable() {
+        return true;
+    }
+
     public ProgramVariable(String name, Type type) {
         this.name = name;
         this.type = type;

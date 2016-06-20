@@ -1,13 +1,18 @@
 package sg.edu.nus.comp.codis.ast;
 
 /**
- * Variable that implements physical equality
+ * Variable value of which we don't care about. Implements physical equality. Test instantiated
  */
 public class Dummy extends Variable {
     private Type type;
 
     public Type getType() {
         return type;
+    }
+
+    @Override
+    public boolean isTestInstantiable() {
+        return true;
     }
 
     public Dummy(Type type) {

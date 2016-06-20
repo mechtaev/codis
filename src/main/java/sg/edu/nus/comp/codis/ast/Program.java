@@ -1,13 +1,14 @@
 package sg.edu.nus.comp.codis.ast;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Created by Sergey Mechtaev on 2/5/2016.
- *
- * Programs are either leafs of applications. They implement physical equality, but it should not be used anyway
+ * Programs are either leafs of applications.
  */
 public class Program {
 
@@ -54,6 +55,57 @@ public class Program {
             semantics = Traverse.substitute(root.getSemantics(), map);
         }
         return Traverse.substitute(semantics, parameterValuation);
+    }
+
+    public List<Component> getLeaves() {
+        List<Component> current = new ArrayList<>();
+        if (this.isLeaf()) {
+            current.add(this.getRoot());
+        } else {
+            for (Program program : this.getChildren().values()) {
+                current.addAll(program.getLeaves());
+            }
+        }
+        return current;
+    }
+
+    public Program substitute(Map<Component, Program> mapping) {
+        if (this.isLeaf()) {
+            if (mapping.containsKey(this.getRoot())) {
+                return mapping.get(this.getRoot());
+            } else {
+                return this;
+            }
+        } else {
+            return Program.app(this.getRoot(), this.getChildren().entrySet().stream()
+                    .collect(Collectors.toMap(
+                            e -> e.getKey(),
+                            e -> e.getValue().substitute(mapping)
+                    )));
+        }
+    }
+
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof Program))
+            return false;
+        if (obj == this)
+            return true;
+
+        Program rhs = (Program) obj;
+        return new EqualsBuilder().
+                append(root, rhs.children).
+                append(root, rhs.children).
+                isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 31).
+                append(root).
+                append(children).
+                toHashCode();
     }
 
     @Override

@@ -3,11 +3,12 @@ package sg.edu.nus.comp.codis;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
 import org.apache.commons.lang3.tuple.Pair;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.Add;
+import sg.edu.nus.comp.codis.ast.theory.BoolConst;
+import sg.edu.nus.comp.codis.ast.theory.ITE;
 import sg.edu.nus.comp.codis.ast.theory.IntConst;
 
 import java.util.*;
@@ -120,6 +121,66 @@ public class TestTreeBoundedSynthesis {
         Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerWithForbidden.synthesize(testSuite, components);
         assertFalse(result.isPresent());
     }
+
+    @Test
+    public void testForbiddenITE() {
+        Multiset<Node> components = HashMultiset.create();
+        components.add(x);
+        components.add(y);
+        components.add(IntConst.of(0));
+        components.add(IntConst.of(1));
+        components.add(Components.ITE);
+        components.add(Components.GT);
+
+        ArrayList<TestCase> testSuite = new ArrayList<>();
+        Map<ProgramVariable, Node> assignment1 = new HashMap<>();
+        assignment1.put(x, IntConst.of(1));
+        assignment1.put(y, IntConst.of(2));
+        TestCase testCase1 = TestCase.ofAssignment(assignment1, IntConst.of(0));
+        testCase1.setId("t1");
+        testSuite.add(testCase1);
+
+        Map<ProgramVariable, Node> assignment2 = new HashMap<>();
+        assignment2.put(x, IntConst.of(2));
+        assignment2.put(y, IntConst.of(1));
+        TestCase testCase2 = TestCase.ofAssignment(assignment2, IntConst.of(1));
+        testCase2.setId("t2");
+        testSuite.add(testCase2);
+
+        List<Program> forbidden = new ArrayList<>();
+//        Map<Hole, Program> argsGT = new HashMap<>();
+//        argsGT.put((Hole)Components.GT.getLeft(), Program.leaf(new Component(x)));
+//        argsGT.put((Hole)Components.GT.getRight(), Program.leaf(new Component(y)));
+//        Map<Hole, Program> args = new HashMap<>();
+//        args.put((Hole)Components.ITE.getArgs().get(0), Program.app(new Component(Components.GT), argsGT));
+//        args.put((Hole)Components.ITE.getArgs().get(1), Program.leaf(new Component(IntConst.of(0))));
+//        args.put((Hole)Components.ITE.getArgs().get(2), Program.leaf(new Component(IntConst.of(1))));
+//        forbidden.add(Program.app(new Component(Components.ITE), args));
+
+        Synthesis synthesizerWithForbidden = new TreeBoundedSynthesis(MathSAT.buildInterpolatingSolver(), 3, true, forbidden);
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerWithForbidden.synthesize(testSuite, components);
+        assertFalse(result.isPresent());
+    }
+
+    @Test
+    public void testSimpleITE() {
+        Multiset<Node> components = HashMultiset.create();
+        components.add(BoolConst.TRUE);
+        components.add(IntConst.of(0));
+        components.add(IntConst.of(1));
+        components.add(Components.ITE);
+
+        ArrayList<TestCase> testSuite = new ArrayList<>();
+        Map<ProgramVariable, Node> assignment1 = new HashMap<>();
+        TestCase testCase1 = TestCase.ofAssignment(assignment1, IntConst.of(0));
+        testCase1.setId("t1");
+        testSuite.add(testCase1);
+
+        Synthesis synthesizerWithForbidden = new TreeBoundedSynthesis(MathSAT.buildInterpolatingSolver(), 3, true);
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerWithForbidden.synthesize(testSuite, components);
+        assertTrue(result.isPresent());
+    }
+
 
     @Test
     public void testUnique() {

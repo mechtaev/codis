@@ -2,6 +2,7 @@ package sg.edu.nus.comp.codis;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
+import fj.P;
 import fj.data.Either;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -19,13 +20,14 @@ import java.util.stream.Collectors;
  */
 public class CODIS extends SynthesisWithLearning {
 
-    private Logger logger = LoggerFactory.getLogger(CEGIS.class);
+    private Logger logger = LoggerFactory.getLogger(CODIS.class);
 
-    private Map<Multiset<Node>, Node> conflicts;
-    private List<Triple<Node, TestCase, Map<Integer, Node>>> path;
     private int bound;
     private Tester tester;
     private InterpolatingSolver iSolver;
+
+    private Map<Multiset<Node>, Node> conflicts;
+    private Stack<SearchTreeNode> synthesisSequence;
 
     public CODIS(Solver solver, InterpolatingSolver iSolver, int bound) {
         this.bound = bound;
@@ -33,59 +35,103 @@ public class CODIS extends SynthesisWithLearning {
         this.iSolver = iSolver;
     }
 
-    public static List<Component> getLeaves(Program p) {
-        List<Component> current = new ArrayList<>();
-        if (p.isLeaf()) {
-            current.add(p.getRoot());
-        } else {
-            for (Program program : p.getChildren().values()) {
-                current.addAll(getLeaves(program));
-            }
-        }
-        return current;
-    }
-
-    public static Program substitute(Program p, Map<Component, Program> mapping) {
-        if (p.isLeaf()) {
-            if (mapping.containsKey(p.getRoot())) {
-                return mapping.get(p.getRoot());
-            } else {
-                return p;
-            }
-        } else {
-            return Program.app(p.getRoot(), p.getChildren().entrySet().stream()
-                    .collect(Collectors.toMap(
-                            e -> e.getKey(),
-                            e -> substitute(e.getValue(), mapping)
-                    )));
-        }
-    }
-
-    private Multiset<Node> remainingComponents(Multiset<Node> total, Program p, Component leaf) {
+    private Multiset<Node> remainingComponents(Multiset<Node> total, Program p) {
         Multiset<Node> result = HashMultiset.create(total);
-        removeUsedComponents(result, p, leaf);
+        removeUsedComponents(result, p);
         return result;
     }
 
-    private void removeUsedComponents(Multiset<Node> components, Program p, Component leaf) {
-        if (!p.getRoot().equals(leaf)) {
-            components.remove(p.getRoot().getSemantics());
-        }
+    private void removeUsedComponents(Multiset<Node> components, Program p) {
+        components.remove(p.getRoot().getSemantics());
         for (Program program : p.getChildren().values()) {
-            removeUsedComponents(components, program, leaf);
+            removeUsedComponents(components, program);
         }
     }
 
+    class SearchTreeNode {
+        private Pair<Program, Map<Parameter, Constant>> program;
+        private Multiset<Node> remainingComponents;
+        private List<TestCase> fixed;
+        private List<TestCase> failing;
+        private Component leaf;
+        private List<Component> remainingLeaves;
+        private TestCase test;
+        private List<TestCase> remainingTests;
+        private List<Program> explored;
 
-    class SynthesisContext extends TestCase {
+        public SearchTreeNode(Pair<Program, Map<Parameter, Constant>> program,
+                              Multiset<Node> remainingComponents,
+                              List<TestCase> fixed,
+                              List<TestCase> failing,
+                              Component leaf,
+                              List<Component> remainingLeaves,
+                              TestCase test,
+                              List<TestCase> remainingTests,
+                              List<Program> explored) {
+            this.program = program;
+            this.fixed = fixed;
+            this.failing = failing;
+            this.leaf = leaf;
+            this.test = test;
+            this.explored = explored;
+            this.remainingLeaves = remainingLeaves;
+            this.remainingTests = remainingTests;
+            this.remainingComponents = remainingComponents;
+        }
+
+    }
+
+    //NOTE: choose next leaf and restore remaining tests
+    private SearchTreeNode chooseNextLeaf(SearchTreeNode s) {
+        List<Component> remaining = s.remainingLeaves;
+        Component next = remaining.get(0);
+        List<Component> nextRemaining = remaining.subList(1, remaining.size());
+        return new SearchTreeNode(s.program, s.remainingComponents, s.fixed, s.failing, next, nextRemaining, s.test, s.failing, s.explored);
+    }
+
+    private SearchTreeNode chooseNextTest(SearchTreeNode s) {
+        List<TestCase> remaining = s.remainingTests;
+        TestCase next = remaining.get(0);
+        List<TestCase> nextRemaining = remaining.subList(1, remaining.size());
+        return new SearchTreeNode(s.program, s.remainingComponents, s.fixed, s.failing, s.leaf, s.remainingLeaves, next, nextRemaining, s.explored);
+    }
+
+    private SearchTreeNode addExplored(SearchTreeNode s, Program p) {
+        List<Program> explored = new ArrayList<>(s.explored);
+        explored.add(p);
+        return new SearchTreeNode(s.program, s.remainingComponents, s.fixed, s.failing, s.leaf, s.remainingLeaves, s.test, s.remainingTests, explored);
+    }
+
+    private String ppList(List<? extends Object> list) {
+        String repr = "";
+        for (Object o : list) {
+            repr += o.toString() + " ";
+        }
+        return repr;
+    }
+
+    private void logSearchTreeNode(SearchTreeNode n) {
+        logger.info("Program: " + n.program.getLeft().getSemantics(n.program.getRight()));
+//        List<Component> flattenedComponents = n.remainingComponents.stream().map(Component::new).collect(Collectors.toList());
+//        logger.info("Remaining: " + ppList(flattenedComponents));
+//        logger.info("Fixed: " + ppList(n.fixed));
+//        logger.info("Failing: " + ppList(n.failing));
+        logger.info("Leaf: " + n.leaf);
+        logger.info("Test: " + n.test);
+        logger.info("Fixed/Failing: " + n.fixed.size() + "/" + n.failing.size());
+    }
+
+    private class SynthesisContext extends TestCase {
 
         private TestCase outerTest;
         private Pair<Program, Map<Parameter, Constant>> context;
+        private Variable globalOutput;
 
-        public SynthesisContext(TestCase outerTest, Pair<Program, Map<Parameter, Constant>> context, Component leaf) {
+        SynthesisContext(TestCase outerTest, Pair<Program, Map<Parameter, Constant>> context, Component leaf) {
             this.outerTest = outerTest;
             this.context = context;
             this.leaf = leaf;
+            this.globalOutput = new ProgramOutput(outerTest.getOutputType());
         }
 
         private Component leaf;
@@ -93,13 +139,25 @@ public class CODIS extends SynthesisWithLearning {
         @Override
         public List<Node> getConstraints(Variable output) {
             List<Node> constraints = new ArrayList<>();
-            ProgramVariable globalOutput = new ProgramVariable("<globalOutput>", outerTest.getOutputType());
+
             constraints.addAll(outerTest.getConstraints(globalOutput));
+
             Map<Component, Program> mapping = new HashMap<>();
             mapping.put(leaf, Program.leaf(new Component(output)));
-            Node substituted = substitute(context.getLeft(), mapping).getSemantics(context.getRight());
+            Node substituted = context.getLeft().substitute(mapping).getSemantics(context.getRight());
             Node contextClause = new Equal(globalOutput, substituted);
             constraints.add(contextClause);
+
+            //NOTE: I need to relax constraints for parameters that are only used in the leaf
+            for (Map.Entry<Parameter, Constant> parameterConstantEntry : context.getRight().entrySet()) {
+                Parameter p = parameterConstantEntry.getKey();
+                Constant v = parameterConstantEntry.getValue();
+                if (leaf.getSemantics().contains(p) && !substituted.contains(p)) {
+                    continue;
+                }
+                constraints.add(new Equal(p, v));
+            }
+
             return constraints;
         }
 
@@ -107,6 +165,16 @@ public class CODIS extends SynthesisWithLearning {
         public Type getOutputType() {
             return TypeInference.typeOf(leaf);
         }
+    }
+
+    private List<TestCase> getFailing(Pair<Program, Map<Parameter, Constant>> p, List<TestCase> t) {
+        List<TestCase> failing = new ArrayList<>();
+        for (TestCase testCase : t) {
+            if (!tester.isPassing(p.getLeft(), p.getRight(), testCase)) {
+                failing.add(testCase);
+            }
+        }
+        return failing;
     }
 
     /**
@@ -120,97 +188,95 @@ public class CODIS extends SynthesisWithLearning {
     public Either<Pair<Program, Map<Parameter, Constant>>, Node> synthesizeOrLearn(List<TestCase> testSuite,
                                                                                    Multiset<Node> components) {
         conflicts = new HashMap<>();
+        synthesisSequence = new Stack<>();
+
+        //FIXME: should start from an empty program, because leaf program is not always possible
+
         TreeBoundedSynthesis initialSynthesizer = new TreeBoundedSynthesis(iSolver, 1, true);
         List<TestCase> initialTestSuite = new ArrayList<>();
         initialTestSuite.add(testSuite.get(0));
         Pair<Program, Map<Parameter, Constant>> initial = initialSynthesizer.synthesize(initialTestSuite, components).get();
+
         List<TestCase> fixed = new ArrayList<>();
         fixed.add(testSuite.get(0));
-        return expand(initial, components, testSuite, fixed);
-    }
 
-    public Either<Pair<Program, Map<Parameter, Constant>>, Node> expand(Pair<Program, Map<Parameter, Constant>> last,
-                                                                        Multiset<Node> components,
-                                                                        List<TestCase> testSuite,
-                                                                        List<TestCase> fixed) {
-        List<TestCase> failing = new ArrayList<>();
-        for (TestCase testCase : testSuite) {
-            if (!tester.isPassing(last.getLeft(), last.getRight(), testCase)) {
-                failing.add(testCase);
-            }
-        }
-        logger.info("Current program: " + last.getLeft().getSemantics(last.getRight()));
-        logger.info("Fixed/Failing/Total: " + fixed.size() + "/" + failing.size() + "/" + testSuite.size());
+        List<TestCase> failing = getFailing(initial, testSuite);
+
         if (failing.isEmpty()) {
-            return Either.left(last);
+            return Either.left(initial);
         }
-        for (Component leaf : getLeaves(last.getLeft())) {
+
+        Multiset<Node> remaining = remainingComponents(components, initial.getLeft());
+
+        SearchTreeNode first =
+                chooseNextTest(
+                        chooseNextLeaf(
+                                new SearchTreeNode(initial, remaining, fixed, failing, null, initial.getLeft().getLeaves(), null, failing, new ArrayList<>())));
+        synthesisSequence.push(first);
+
+        while (!synthesisSequence.isEmpty()) {
+            SearchTreeNode current = synthesisSequence.pop();
+            logger.info("----------------------------------------------------------");
+            logSearchTreeNode(current);
+            if (current.program.getLeft().getSemantics(current.program.getRight()).toString().equals("6")) {
+                System.out.println("here");
+            }
+
+            List<TestCase> newFixed = new ArrayList<>(current.fixed);
+            newFixed.add(current.test);
+
+            List<TestCase> contextTestSuite = new ArrayList<>();
+            for (TestCase testCase : newFixed) {
+                contextTestSuite.add(new SynthesisContext(testCase, current.program, current.leaf));
+            }
+
+            Multiset<Node> remainingWithRemovedLeaf = HashMultiset.create();
+            remainingWithRemovedLeaf.addAll(current.remainingComponents);
+            remainingWithRemovedLeaf.add(current.leaf.getSemantics());
+
+            TreeBoundedSynthesis synthesizer = new TreeBoundedSynthesis(iSolver, bound, true, current.explored);
+
             Either<Pair<Program, Map<Parameter, Constant>>, Node> result =
-                    expandLeaf(last, leaf, components, testSuite, fixed, failing);
-            if (result.isLeft()) {
-                return result;
+                    synthesizer.synthesizeOrLearn(contextTestSuite, remainingWithRemovedLeaf);
+
+            if (result.isRight()) {
+                if (!current.remainingTests.isEmpty()) {
+                    synthesisSequence.push(chooseNextTest(current));
+                } else if (!current.remainingLeaves.isEmpty()) {
+                    synthesisSequence.push(chooseNextLeaf(current));
+                }
+                continue;
             }
-        }
-        return Either.right(new ProgramVariable("<unknown>", testSuite.get(0).getOutputType()));
-    }
 
-    public Either<Pair<Program, Map<Parameter, Constant>>, Node> expandLeaf(Pair<Program, Map<Parameter, Constant>> last,
-                                                                            Component leaf,
-                                                                            Multiset<Node> components,
-                                                                            List<TestCase> testSuite,
-                                                                            List<TestCase> fixed,
-                                                                            List<TestCase> failing) {
-        Multiset<Node> remaining = remainingComponents(components, last.getLeft(), leaf);
-        for (TestCase failingTest : failing) {
-            Either<Pair<Program, Map<Parameter, Constant>>, Node> result =
-                    expandLeafForTest(last, leaf, remaining, testSuite, fixed, failingTest);
-            if (result.isLeft()) {
-                return result;
+            Pair<Program, Map<Parameter, Constant>> substitution = result.left().value();
+
+            synthesisSequence.push(addExplored(current, substitution.getLeft()));
+
+            Map<Parameter, Constant> newParameterValuation = new HashMap<>();
+            newParameterValuation.putAll(current.program.getRight());
+            newParameterValuation.putAll(substitution.getRight()); //NOTE: substitution can override parameters
+            Map<Component, Program> mapping = new HashMap<>();
+            mapping.put(current.leaf, substitution.getLeft());
+            Program newProgram = current.program.getLeft().substitute(mapping);
+
+            Pair<Program, Map<Parameter, Constant>> next = new ImmutablePair<>(newProgram, newParameterValuation);
+
+            List<TestCase> newFailing = getFailing(next, testSuite);
+            if (newFailing.isEmpty()) {
+                return Either.left(next);
             }
-        }
-        return Either.right(new ProgramVariable("<unknown>", testSuite.get(0).getOutputType()));
-    }
 
-    public Either<Pair<Program, Map<Parameter, Constant>>, Node> expandLeafForTest(Pair<Program, Map<Parameter, Constant>> last,
-                                                                               Component leaf,
-                                                                               Multiset<Node> components,
-                                                                               List<TestCase> testSuite,
-                                                                               List<TestCase> fixed,
-                                                                               TestCase failing) {
-        List<TestCase> newFixed = new ArrayList<>();
-        newFixed.addAll(fixed);
-        newFixed.add(failing);
-        List<TestCase> contextTestSuite = new ArrayList<>();
-        for (TestCase testCase : newFixed) {
-            contextTestSuite.add(new SynthesisContext(testCase, last, leaf));
-        }
-        TreeBoundedSynthesis synthesizer = new TreeBoundedSynthesis(iSolver, bound, true);
-        Either<Pair<Program, Map<Parameter, Constant>>, Node> result =
-                synthesizer.synthesizeOrLearn(contextTestSuite, components);
-        if (result.isRight()) {
-            //logger.info("Learned conflict: " + result.right().value());
-            conflicts.put(components, result.right().value());
-            return result;
+            Multiset<Node> newComponents = remainingComponents(components, newProgram);
+
+            List<Component> newLeaves = newProgram.getLeaves();
+
+            SearchTreeNode newNode = chooseNextTest(
+                    chooseNextLeaf(
+                            new SearchTreeNode(next, newComponents, newFixed, newFailing, null, newLeaves, null, newFailing, new ArrayList<Program>())));
+            synthesisSequence.push(newNode);
         }
 
-        //logger.info("Base program: " + last.getLeft().getSemantics(last.getRight()));
-        //logger.info("Leaf: " + leaf);
-
-        Map<Parameter, Constant> newParameterValuation = new HashMap<>();
-        newParameterValuation.putAll(last.getRight());
-        newParameterValuation.putAll(result.left().value().getRight());
-
-        Map<Component, Program> mapping = new HashMap<>();
-        mapping.put(leaf, result.left().value().getLeft());
-        Program newProgram = substitute(last.getLeft(), mapping);
-
-        for (TestCase testCase : newFixed) {
-            if (!tester.isPassing(newProgram, newParameterValuation, testCase)) {
-                logger.error("Wrong expansion");
-            }
-        }
-
-        return expand(new ImmutablePair<>(newProgram, newParameterValuation), components, testSuite, newFixed);
+        return Either.right(new Dummy(BoolType.TYPE));
     }
 
 }

@@ -19,6 +19,11 @@ public class Location extends Variable {
         return type;
     }
 
+    @Override
+    public boolean isTestInstantiable() {
+        return false;
+    }
+
     public Location(Variable variable, Type type) {
         assert variable instanceof ComponentInput || variable instanceof ComponentOutput;
         assert type instanceof IntType || type instanceof BVType;

@@ -11,6 +11,11 @@ public class ProgramOutput extends Variable {
         return type;
     }
 
+    @Override
+    public boolean isTestInstantiable() {
+        return true;
+    }
+
     public ProgramOutput(Type type) {
         this.type = type;
     }

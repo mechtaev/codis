@@ -66,4 +66,9 @@ public class ComponentInput extends Variable {
     public Type getType() {
         return hole.getType();
     }
+
+    @Override
+    public boolean isTestInstantiable() {
+        return true;
+    }
 }

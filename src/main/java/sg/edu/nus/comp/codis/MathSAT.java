@@ -1,6 +1,7 @@
 package sg.edu.nus.comp.codis;
 
 import fj.data.Either;
+import mathsat.api;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sg.edu.nus.comp.codis.ast.*;
@@ -23,7 +24,7 @@ public class MathSAT implements Solver, InterpolatingSolver {
     private Logger logger = LoggerFactory.getLogger(MathSAT.class);
 
     private long config;
-    private long solver;
+    private long solver = 0;
 
     private MathSAT(boolean interpolating) {
         this.config = mathsat.api.msat_create_config();
@@ -33,6 +34,9 @@ public class MathSAT implements Solver, InterpolatingSolver {
         }
         //mathsat.api.msat_set_option(this.config, "debug.api_call_trace", "1");
         //mathsat.api.msat_set_option(this.config, "debug.api_call_trace_filename", "trace.smt2");
+    }
+
+    private void reset() {
         this.solver = mathsat.api.msat_create_env(this.config);
     }
 
@@ -45,8 +49,10 @@ public class MathSAT implements Solver, InterpolatingSolver {
     }
 
     public void dispose() {
-        mathsat.api.msat_destroy_env(this.solver);
-        mathsat.api.msat_destroy_config(this.config);
+        if (solver != 0) {
+            mathsat.api.msat_destroy_env(this.solver);
+//            mathsat.api.msat_destroy_config(this.config);
+        }
     }
 
     private RuntimeException msatError() {
@@ -57,21 +63,19 @@ public class MathSAT implements Solver, InterpolatingSolver {
     public Either<Map<Variable, Constant>, List<Node>> getModelOrCore(List<Node> clauses,
                                                                       List<Node> assumptions) {
 
-        mathsat.api.msat_reset_env(solver);
+        dispose();
+        reset();
         VariableMarshaller marshaller = new VariableMarshaller();
-        List<Long> decls = new ArrayList<>();
         for (Node clause : clauses) {
             NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
             clause.accept(visitor);
             mathsat.api.msat_assert_formula(solver, visitor.getExpr());
-            decls.addAll(visitor.getDecls());
         }
         ArrayList<Long> assumptionExprs = new ArrayList<>();
         for (Node assumption : assumptions) {
             NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
             assumption.accept(visitor);
             assumptionExprs.add(visitor.getExpr());
-            decls.addAll(visitor.getDecls());
         }
 
         long[] assumptionArray = new long[assumptionExprs.size()];
@@ -114,7 +118,8 @@ public class MathSAT implements Solver, InterpolatingSolver {
     }
 
     private long getIntVarDecl(String name) {
-        return mathsat.api.msat_declare_function(solver, name, mathsat.api.msat_get_integer_type(solver));
+        long decl = api.msat_declare_function(solver, name, api.msat_get_integer_type(solver));
+        return decl;
     }
     private long getIntVar(String name) {
         long d = getIntVarDecl(name);
@@ -122,7 +127,8 @@ public class MathSAT implements Solver, InterpolatingSolver {
     }
 
     private long getBoolVarDecl(String name) {
-        return mathsat.api.msat_declare_function(solver, name, mathsat.api.msat_get_bool_type(solver));
+        long decl = api.msat_declare_function(solver, name, api.msat_get_bool_type(solver));
+        return decl;
     }
 
     private long getBoolVar(String name) {
@@ -131,7 +137,8 @@ public class MathSAT implements Solver, InterpolatingSolver {
     }
 
     private long getBVVarDecl(String name, int size) {
-        return mathsat.api.msat_declare_function(solver, name, mathsat.api.msat_get_bv_type(solver, size));
+        long decl = api.msat_declare_function(solver, name, api.msat_get_bv_type(solver, size));
+        return decl;
     }
 
     private long getBVVar(String name, int size) {
@@ -191,46 +198,45 @@ public class MathSAT implements Solver, InterpolatingSolver {
 
     @Override
     public Optional<Map<Variable, Constant>> getModel(List<Node> clauses) {
-        mathsat.api.msat_reset_env(solver);
+        dispose();
+        reset();
         VariableMarshaller marshaller = new VariableMarshaller();
-        List<Long> decls = new ArrayList<>();
         for (Node clause : clauses) {
             NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
             clause.accept(visitor);
             mathsat.api.msat_assert_formula(solver, visitor.getExpr());
-            decls.addAll(visitor.getDecls());
         }
 
-        if (logger.isTraceEnabled()) {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS");
-            Date now = new Date();
-            Path logsmt = Paths.get("cbs" + sdf.format(now) + ".smt2");
-            try {
-                List<String> entries = new ArrayList<>();
-                entries.add("(set-option :produce-models true)");
-                Set<Long> seenDecls = new HashSet<>();
-                for (long d : decls) {
-                    if (seenDecls.add(d)) {
-                        String n = mathsat.api.msat_decl_get_name(d);
-                        String tp = "Bool";
-                        if (mathsat.api.msat_is_integer_type(solver, mathsat.api.msat_decl_get_return_type(d)) != 0) {
-                            tp = "Int";
-                        }
-                        entries.add("(declare-fun |" + n.replace("|", "\\|") + "| () " + tp + ")");
-                    }
-                }
-                long[] assertions = mathsat.api.msat_get_asserted_formulas(solver);
-                for (int i = 0; i < assertions.length; ++i) {
-                    String c = mathsat.api.msat_to_smtlib2_term(solver, assertions[i]);
-                    entries.add("(assert " + c + ")");
-                }
-                entries.add("(check-sat)");
-                entries.add("(get-model)");
-                Files.write(logsmt, entries, Charset.forName("UTF-8"));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+//        if (logger.isTraceEnabled()) {
+//            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS");
+//            Date now = new Date();
+//            Path logsmt = Paths.get("cbs" + sdf.format(now) + ".smt2");
+//            try {
+//                List<String> entries = new ArrayList<>();
+//                entries.add("(set-option :produce-models true)");
+//                Set<Long> seenDecls = new HashSet<>();
+//                for (long d : decls) {
+//                    if (seenDecls.add(d)) {
+//                        String n = mathsat.api.msat_decl_get_name(d);
+//                        String tp = "Bool";
+//                        if (mathsat.api.msat_is_integer_type(solver, mathsat.api.msat_decl_get_return_type(d)) != 0) {
+//                            tp = "Int";
+//                        }
+//                        entries.add("(declare-fun |" + n.replace("|", "\\|") + "| () " + tp + ")");
+//                    }
+//                }
+//                long[] assertions = mathsat.api.msat_get_asserted_formulas(solver);
+//                for (int i = 0; i < assertions.length; ++i) {
+//                    String c = mathsat.api.msat_to_smtlib2_term(solver, assertions[i]);
+//                    entries.add("(assert " + c + ")");
+//                }
+//                entries.add("(check-sat)");
+//                entries.add("(get-model)");
+//                Files.write(logsmt, entries, Charset.forName("UTF-8"));
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        }
 
         int status = mathsat.api.msat_solve(solver);
         if (status == mathsat.api.MSAT_SAT) {
@@ -252,10 +258,10 @@ public class MathSAT implements Solver, InterpolatingSolver {
 
     @Override
     public Either<Map<Variable, Constant>, Node> getModelOrInterpolant(List<Node> leftClauses, List<Node> rightClauses) {
-        mathsat.api.msat_reset_env(solver);
+        dispose();
+        reset();
 
         VariableMarshaller marshaller = new VariableMarshaller();
-        //List<FuncDecl> decls = new ArrayList<>();
 
         int groupA = mathsat.api.msat_create_itp_group(solver);
         int groupB = mathsat.api.msat_create_itp_group(solver);
@@ -264,16 +270,15 @@ public class MathSAT implements Solver, InterpolatingSolver {
         for (Node leftClause : leftClauses) {
             NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
             leftClause.accept(visitor);
-            //decls.addAll(visitor.getDecls());
             int error = mathsat.api.msat_assert_formula(solver, visitor.getExpr());
             assert (error == 0);
         }
 
         mathsat.api.msat_set_itp_group(solver, groupB);
+
         for (Node rightClause : rightClauses) {
             NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
             rightClause.accept(visitor);
-            //decls.addAll(visitor.getDecls());
             int error = mathsat.api.msat_assert_formula(solver, visitor.getExpr());
             assert (error == 0);
         }
@@ -429,13 +434,11 @@ public class MathSAT implements Solver, InterpolatingSolver {
 
         private Stack<Long> exprs;
 
-        private List<Long> decls;
         private VariableMarshaller marshaller;
 
         NodeTranslatorVisitor(VariableMarshaller marshaller) {
             this.marshaller = marshaller;
             this.exprs = new Stack<>();
-            this.decls = new ArrayList<>();
         }
 
         long getExpr() {
@@ -443,21 +446,14 @@ public class MathSAT implements Solver, InterpolatingSolver {
             return exprs.peek();
         }
 
-        List<Long> getDecls() {
-            return decls;
-        }
-
         private void processVariable(Variable variable) {
             if (TypeInference.typeOf(variable).equals(IntType.TYPE)) {
                 pushExpr(getIntVar(marshaller.toString(variable)));
-                decls.add(getIntVarDecl(marshaller.toString(variable)));
             } else if (TypeInference.typeOf(variable).equals(BoolType.TYPE)) {
                 pushExpr(getBoolVar(marshaller.toString(variable)));
-                decls.add(getBoolVarDecl(marshaller.toString(variable)));
             }else if (TypeInference.typeOf(variable) instanceof BVType) {
                 int size = ((BVType) TypeInference.typeOf(variable)).getSize();
                 pushExpr(getBVVar(marshaller.toString(variable), size));
-                decls.add(getBVVarDecl(marshaller.toString(variable), size));
             } else {
                 throw new UnsupportedOperationException();
             }

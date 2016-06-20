@@ -23,7 +23,7 @@ public class VariableMarshaller {
 
     private static String getLiteral(Variable variable) {
         return variable.toString();
-//
+
 //        if (variable instanceof ProgramVariable) {
 //            return "v";
 //        } else if (variable instanceof Parameter) {
@@ -39,7 +39,7 @@ public class VariableMarshaller {
 //        } else if (variable instanceof TestInstance) {
 //            return "i";
 //        } else {
-//            return "?";
+//            return "unknown";
 //        }
     }
 
@@ -48,7 +48,7 @@ public class VariableMarshaller {
             return variableToString.get(variable);
         } else {
             index++;
-            String repr = getLiteral(variable) + index;
+            String repr = "v" + index;//getLiteral(variable) + index;
             variableToString.put(variable, repr);
             stringToVariable.put(repr, variable);
             return repr;

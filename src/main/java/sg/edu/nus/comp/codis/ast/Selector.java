@@ -39,4 +39,9 @@ public class Selector extends Variable {
     public Type getType() {
         return BoolType.TYPE;
     }
+
+    @Override
+    public boolean isTestInstantiable() {
+        return false;
+    }
 }

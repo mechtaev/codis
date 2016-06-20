@@ -18,6 +18,11 @@ public class Parameter extends Variable {
         return type;
     }
 
+    @Override
+    public boolean isTestInstantiable() {
+        return false;
+    }
+
     public Parameter(String name, Type type) {
         this.name = name;
         this.type = type;

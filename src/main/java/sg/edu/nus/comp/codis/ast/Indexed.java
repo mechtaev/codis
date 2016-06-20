@@ -16,6 +16,11 @@ public class Indexed extends Variable {
         return variable.getType();
     }
 
+    @Override
+    public boolean isTestInstantiable() {
+        return variable.isTestInstantiable();
+    }
+
     public Indexed(Variable variable, int index) {
         this.variable = variable;
         this.index = index;

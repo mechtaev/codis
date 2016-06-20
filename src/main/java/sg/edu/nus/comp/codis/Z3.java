@@ -196,7 +196,7 @@ public class Z3 implements Solver, InterpolatingSolver {
 
             Expr proof = iSolver.getProof();
             Expr[] interps = globalIContext.GetInterpolant(proof, pat, params);
-            System.out.println("\nOK, the interpolant is: " + interps[0]);
+            //System.out.println("\nOK, the interpolant is: " + interps[0]);
             return Either.right(convertZ3ToNode(interps[0], marshaller));
         } else {
             throw new UnsupportedOperationException();

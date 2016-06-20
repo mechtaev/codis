@@ -4,10 +4,7 @@ import com.google.common.collect.Multiset;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sg.edu.nus.comp.codis.ast.Constant;
-import sg.edu.nus.comp.codis.ast.Node;
-import sg.edu.nus.comp.codis.ast.Parameter;
-import sg.edu.nus.comp.codis.ast.Program;
+import sg.edu.nus.comp.codis.ast.*;
 
 import java.util.*;
 

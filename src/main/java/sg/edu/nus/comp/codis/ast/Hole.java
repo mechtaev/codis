@@ -24,6 +24,11 @@ public class Hole extends Variable {
         return type;
     }
 
+    @Override
+    public boolean isTestInstantiable() {
+        return false;
+    }
+
     public Hole(String name, Type type, Class superclass) {
         this.name = name;
         this.type = type;
