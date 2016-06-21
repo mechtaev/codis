@@ -25,7 +25,7 @@ public class TestCODIS {
 
     @BeforeClass
     public static void initSolver() {
-        synthesizer = new CODIS(Z3.buildSolver(), Z3.buildInterpolatingSolver(), 2);
+        synthesizer = new CODIS(Z3.buildSolver(), Z3.buildInterpolatingSolver(), 2, Optional.empty());
     }
 
     private final ProgramVariable x = ProgramVariable.mkInt("x");

@@ -2,18 +2,15 @@ package sg.edu.nus.comp.codis;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
-import fj.P;
 import fj.data.Either;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.commons.lang3.tuple.Triple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.Equal;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Created by Sergey Mechtaev on 7/4/2016.
@@ -22,16 +19,18 @@ public class CODIS extends SynthesisWithLearning {
 
     private Logger logger = LoggerFactory.getLogger(CODIS.class);
 
-    private int bound;
+    private int incrementBound;
     private Tester tester;
     private InterpolatingSolver iSolver;
+    private Optional<Integer> totalBound;
 
     private Map<Multiset<Node>, Node> conflicts;
 
-    public CODIS(Solver solver, InterpolatingSolver iSolver, int bound) {
-        this.bound = bound;
+    public CODIS(Solver solver, InterpolatingSolver iSolver, int incrementBound, Optional<Integer> totalBound) {
+        this.incrementBound = incrementBound;
         this.tester = new Tester(solver);
         this.iSolver = iSolver;
+        this.totalBound = totalBound;
     }
 
     private Multiset<Node> remainingComponents(Multiset<Node> total, Program p) {
@@ -172,6 +171,22 @@ public class CODIS extends SynthesisWithLearning {
         return failing;
     }
 
+    private int leafDepth(Program p, Component leaf) {
+        if (p.getRoot().equals(leaf)) {
+            return 1;
+        }
+        int depth = 0;
+        for (Program program : p.getChildren().values()) {
+            depth += leafDepth(program, leaf);
+        }
+        if (depth == 0) {
+            return 0;
+        } else {
+            return depth + 1;
+        }
+    }
+
+
     /**
      * TODO:
      * 1. Handle parameters more correctly (when they are parts of components)
@@ -224,6 +239,13 @@ public class CODIS extends SynthesisWithLearning {
             Multiset<Node> remainingWithRemovedLeaf = HashMultiset.create();
             remainingWithRemovedLeaf.addAll(current.remainingComponents);
             remainingWithRemovedLeaf.add(current.leaf.getSemantics());
+
+            int bound;
+            if (totalBound.isPresent()) {
+                bound = Math.min(this.incrementBound, totalBound.get() - leafDepth(current.program.getLeft(), current.leaf) + 1);
+            } else {
+                bound = this.incrementBound;
+            }
 
             TreeBoundedSynthesis synthesizer = new TreeBoundedSynthesis(iSolver, bound, true, current.explored);
 
