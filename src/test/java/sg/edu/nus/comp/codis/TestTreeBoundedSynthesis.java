@@ -123,6 +123,29 @@ public class TestTreeBoundedSynthesis {
     }
 
     @Test
+    public void testForbiddenParameter() {
+        Multiset<Node> components = HashMultiset.create();
+        Parameter p = Parameter.mkInt("p");
+        components.add(p);
+        //components.add(x);
+        components.add(Components.ADD);
+        components.add(Components.ITE);
+
+        ArrayList<TestCase> testSuite = new ArrayList<>();
+        Map<ProgramVariable, Node> assignment1 = new HashMap<>();
+        assignment1.put(x, IntConst.of(10));
+        testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(2)));
+
+        List<Program> forbidden = new ArrayList<>();
+        forbidden.add(Program.leaf(new Component(p)));
+
+        Synthesis synthesizerWithForbidden = new TreeBoundedSynthesis(MathSAT.buildInterpolatingSolver(), 2, true, forbidden);
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerWithForbidden.synthesize(testSuite, components);
+        assertFalse(result.isPresent());
+    }
+
+
+    @Test
     public void testForbiddenITE() {
         Multiset<Node> components = HashMultiset.create();
         components.add(x);
@@ -134,8 +157,8 @@ public class TestTreeBoundedSynthesis {
 
         ArrayList<TestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
-        assignment1.put(x, IntConst.of(1));
-        assignment1.put(y, IntConst.of(2));
+        assignment1.put(x, IntConst.of(5));
+        assignment1.put(y, IntConst.of(7));
         TestCase testCase1 = TestCase.ofAssignment(assignment1, IntConst.of(0));
         testCase1.setId("t1");
         testSuite.add(testCase1);
@@ -147,15 +170,26 @@ public class TestTreeBoundedSynthesis {
         testCase2.setId("t2");
         testSuite.add(testCase2);
 
+
+        Map<Hole, Program> argsGT = new HashMap<>();
+        argsGT.put((Hole)Components.GT.getLeft(), Program.leaf(new Component(x)));
+        argsGT.put((Hole)Components.GT.getRight(), Program.leaf(new Component(y)));
+        Map<Hole, Program> args = new HashMap<>();
+        args.put((Hole)Components.ITE.getArgs().get(0), Program.app(new Component(Components.GT), argsGT));
+        args.put((Hole)Components.ITE.getArgs().get(1), Program.leaf(new Component(IntConst.of(1))));
+        args.put((Hole)Components.ITE.getArgs().get(2), Program.leaf(new Component(IntConst.of(0))));
+
+        Map<Hole, Program> argsGT2 = new HashMap<>();
+        argsGT2.put((Hole)Components.GT.getLeft(), Program.leaf(new Component(y)));
+        argsGT2.put((Hole)Components.GT.getRight(), Program.leaf(new Component(x)));
+        Map<Hole, Program> args2 = new HashMap<>();
+        args2.put((Hole)Components.ITE.getArgs().get(0), Program.app(new Component(Components.GT), argsGT2));
+        args2.put((Hole)Components.ITE.getArgs().get(1), Program.leaf(new Component(IntConst.of(0))));
+        args2.put((Hole)Components.ITE.getArgs().get(2), Program.leaf(new Component(IntConst.of(1))));
+
         List<Program> forbidden = new ArrayList<>();
-//        Map<Hole, Program> argsGT = new HashMap<>();
-//        argsGT.put((Hole)Components.GT.getLeft(), Program.leaf(new Component(x)));
-//        argsGT.put((Hole)Components.GT.getRight(), Program.leaf(new Component(y)));
-//        Map<Hole, Program> args = new HashMap<>();
-//        args.put((Hole)Components.ITE.getArgs().get(0), Program.app(new Component(Components.GT), argsGT));
-//        args.put((Hole)Components.ITE.getArgs().get(1), Program.leaf(new Component(IntConst.of(0))));
-//        args.put((Hole)Components.ITE.getArgs().get(2), Program.leaf(new Component(IntConst.of(1))));
-//        forbidden.add(Program.app(new Component(Components.ITE), args));
+        forbidden.add(Program.app(new Component(Components.ITE), args));
+        forbidden.add(Program.app(new Component(Components.ITE), args2));
 
         Synthesis synthesizerWithForbidden = new TreeBoundedSynthesis(MathSAT.buildInterpolatingSolver(), 3, true, forbidden);
         Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerWithForbidden.synthesize(testSuite, components);
@@ -197,6 +231,31 @@ public class TestTreeBoundedSynthesis {
         Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerUnique.synthesize(testSuite, components);
         assertFalse(result.isPresent());
     }
+
+    @Test
+    public void testUniqueMultiple() {
+        Multiset<Node> components = HashMultiset.create();
+        components.add(x, 2);
+        components.add(Components.ADD, 1);
+        components.add(Components.ITE);
+        components.add(BoolConst.TRUE);
+
+        ArrayList<TestCase> testSuite = new ArrayList<>();
+        Map<ProgramVariable, Node> assignment1 = new HashMap<>();
+        assignment1.put(x, IntConst.of(1));
+        testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(2)));
+
+        Map<Hole, Program> args = new HashMap<>();
+        args.put((Hole)Components.ADD.getLeft(), Program.leaf(new Component(x)));
+        args.put((Hole)Components.ADD.getRight(), Program.leaf(new Component(x)));
+        List<Program> forbidden = new ArrayList<>();
+        forbidden.add(Program.app(new Component(Components.ADD), args));
+
+        Synthesis synthesizerWithForbidden = new TreeBoundedSynthesis(MathSAT.buildInterpolatingSolver(), 3, true, forbidden);
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerWithForbidden.synthesize(testSuite, components);
+        assertFalse(result.isPresent());
+    }
+
 
 
     @Test

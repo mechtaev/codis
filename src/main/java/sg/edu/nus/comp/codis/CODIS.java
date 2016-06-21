@@ -86,7 +86,7 @@ public class CODIS extends SynthesisWithLearning {
         List<Component> remaining = s.remainingLeaves;
         Component next = remaining.get(0);
         List<Component> nextRemaining = remaining.subList(1, remaining.size());
-        return new SearchTreeNode(s.program, s.remainingComponents, s.fixed, s.failing, next, nextRemaining, s.test, s.failing, s.explored);
+        return chooseNextTest(new SearchTreeNode(s.program, s.remainingComponents, s.fixed, s.failing, next, nextRemaining, s.test, s.failing, new ArrayList<>()));
     }
 
     private SearchTreeNode chooseNextTest(SearchTreeNode s) {
@@ -112,13 +112,16 @@ public class CODIS extends SynthesisWithLearning {
 
     private void logSearchTreeNode(SearchTreeNode n) {
         logger.info("Program: " + n.program.getLeft().getSemantics(n.program.getRight()));
-//        List<Component> flattenedComponents = n.remainingComponents.stream().map(Component::new).collect(Collectors.toList());
-//        logger.info("Remaining: " + ppList(flattenedComponents));
-//        logger.info("Fixed: " + ppList(n.fixed));
-//        logger.info("Failing: " + ppList(n.failing));
+        List<Component> flattenedComponents = n.remainingComponents.stream().map(Component::new).collect(Collectors.toList());
+        logger.info("Remaining: " + ppList(flattenedComponents));
+        logger.info("Fixed: " + ppList(n.fixed));
+        logger.info("Failing: " + ppList(n.failing));
+        logger.info("Remaining: " + ppList(n.remainingTests));
         logger.info("Leaf: " + n.leaf);
         logger.info("Test: " + n.test);
         logger.info("Fixed/Failing: " + n.fixed.size() + "/" + n.failing.size());
+        logger.info("Explored: " + ppList(n.explored));
+
     }
 
     private class SynthesisContext extends TestCase {
@@ -209,18 +212,14 @@ public class CODIS extends SynthesisWithLearning {
         Multiset<Node> remaining = remainingComponents(components, initial.getLeft());
 
         SearchTreeNode first =
-                chooseNextTest(
-                        chooseNextLeaf(
-                                new SearchTreeNode(initial, remaining, fixed, failing, null, initial.getLeft().getLeaves(), null, failing, new ArrayList<>())));
+                chooseNextLeaf(
+                        new SearchTreeNode(initial, remaining, fixed, failing, null, initial.getLeft().getLeaves(), null, failing, new ArrayList<>()));
         synthesisSequence.push(first);
 
         while (!synthesisSequence.isEmpty()) {
             SearchTreeNode current = synthesisSequence.pop();
-            logger.info("----------------------------------------------------------");
+            logger.info("------- Stack: " + synthesisSequence.size() + " --------");
             logSearchTreeNode(current);
-            if (current.program.getLeft().getSemantics(current.program.getRight()).toString().equals("6")) {
-                System.out.println("here");
-            }
 
             List<TestCase> newFixed = new ArrayList<>(current.fixed);
             newFixed.add(current.test);
@@ -270,9 +269,9 @@ public class CODIS extends SynthesisWithLearning {
 
             List<Component> newLeaves = newProgram.getLeaves();
 
-            SearchTreeNode newNode = chooseNextTest(
+            SearchTreeNode newNode =
                     chooseNextLeaf(
-                            new SearchTreeNode(next, newComponents, newFixed, newFailing, null, newLeaves, null, newFailing, new ArrayList<Program>())));
+                            new SearchTreeNode(next, newComponents, newFixed, newFailing, null, newLeaves, null, newFailing, new ArrayList<Program>()));
             synthesisSequence.push(newNode);
         }
 
