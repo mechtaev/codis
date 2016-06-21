@@ -85,6 +85,14 @@ public class Program {
         }
     }
 
+    public List<Component> getComponents() {
+        List<Component> list = new ArrayList<>();
+        list.add(this.getRoot());
+        for (Program program : this.getChildren().values()) {
+            list.addAll(program.getComponents());
+        }
+        return list;
+    }
 
     @Override
     public boolean equals(Object obj) {

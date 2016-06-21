@@ -27,7 +27,6 @@ public class CODIS extends SynthesisWithLearning {
     private InterpolatingSolver iSolver;
 
     private Map<Multiset<Node>, Node> conflicts;
-    private Stack<SearchTreeNode> synthesisSequence;
 
     public CODIS(Solver solver, InterpolatingSolver iSolver, int bound) {
         this.bound = bound;
@@ -48,7 +47,7 @@ public class CODIS extends SynthesisWithLearning {
         }
     }
 
-    class SearchTreeNode {
+    private class SearchTreeNode {
         private Pair<Program, Map<Parameter, Constant>> program;
         private Multiset<Node> remainingComponents;
         private List<TestCase> fixed;
@@ -59,15 +58,15 @@ public class CODIS extends SynthesisWithLearning {
         private List<TestCase> remainingTests;
         private List<Program> explored;
 
-        public SearchTreeNode(Pair<Program, Map<Parameter, Constant>> program,
-                              Multiset<Node> remainingComponents,
-                              List<TestCase> fixed,
-                              List<TestCase> failing,
-                              Component leaf,
-                              List<Component> remainingLeaves,
-                              TestCase test,
-                              List<TestCase> remainingTests,
-                              List<Program> explored) {
+        SearchTreeNode(Pair<Program, Map<Parameter, Constant>> program,
+                       Multiset<Node> remainingComponents,
+                       List<TestCase> fixed,
+                       List<TestCase> failing,
+                       Component leaf,
+                       List<Component> remainingLeaves,
+                       TestCase test,
+                       List<TestCase> remainingTests,
+                       List<Program> explored) {
             this.program = program;
             this.fixed = fixed;
             this.failing = failing;
@@ -102,25 +101,19 @@ public class CODIS extends SynthesisWithLearning {
         return new SearchTreeNode(s.program, s.remainingComponents, s.fixed, s.failing, s.leaf, s.remainingLeaves, s.test, s.remainingTests, explored);
     }
 
-    private String ppList(List<? extends Object> list) {
-        String repr = "";
-        for (Object o : list) {
-            repr += o.toString() + " ";
-        }
-        return repr;
-    }
 
     private void logSearchTreeNode(SearchTreeNode n) {
         logger.info("Program: " + n.program.getLeft().getSemantics(n.program.getRight()));
+        logger.info("Used: " + n.program.getLeft().getComponents());
         List<Component> flattenedComponents = n.remainingComponents.stream().map(Component::new).collect(Collectors.toList());
-        logger.info("Remaining: " + ppList(flattenedComponents));
-        logger.info("Fixed: " + ppList(n.fixed));
-        logger.info("Failing: " + ppList(n.failing));
-        logger.info("Remaining: " + ppList(n.remainingTests));
+        logger.info("Remaining: " + flattenedComponents);
+        logger.info("Fixed: " + n.fixed);
+        logger.info("Failing: " + n.failing);
+        logger.info("Remaining: " + n.remainingTests);
         logger.info("Leaf: " + n.leaf);
         logger.info("Test: " + n.test);
         logger.info("Fixed/Failing: " + n.fixed.size() + "/" + n.failing.size());
-        logger.info("Explored: " + ppList(n.explored));
+        logger.info("Explored: " + n.explored);
 
     }
 
@@ -191,7 +184,7 @@ public class CODIS extends SynthesisWithLearning {
     public Either<Pair<Program, Map<Parameter, Constant>>, Node> synthesizeOrLearn(List<TestCase> testSuite,
                                                                                    Multiset<Node> components) {
         conflicts = new HashMap<>();
-        synthesisSequence = new Stack<>();
+        Stack<SearchTreeNode> synthesisSequence = new Stack<>();
 
         //FIXME: should start from an empty program, because leaf program is not always possible
 

@@ -132,7 +132,8 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
         }
         Either<Map<Variable, Constant>, Node> solverResult = solver.getModelOrInterpolant(contextClauses, synthesisClauses);
         if (solverResult.isLeft()) {
-            return Either.left(decode(solverResult.left().value(), root, result.get()));
+            Pair<Program, Map<Parameter, Constant>> decoded = decode(solverResult.left().value(), root, result.get());
+            return Either.left(decoded);
         } else {
             return Either.right(solverResult.right().value());
         }
@@ -227,7 +228,11 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
                 if (infeasibleComponent) {
                     continue;
                 }
-                children.addAll(usedByComponent); //NODE: add only if feasible
+                for (Variable variable : usedByComponent) {
+                    if (!children.contains(variable)) {
+                        children.add(variable); //NODE: add only if feasible
+                    }
+                }
                 subresults.addAll(componentSubresults); //NOTE: add only if it is feasible
 
                 Selector selector = new Selector();

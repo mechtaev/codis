@@ -257,7 +257,6 @@ public class TestTreeBoundedSynthesis {
     }
 
 
-
     @Test
     public void testForbiddenNonexistent() {
         Multiset<Node> components = HashMultiset.create();
