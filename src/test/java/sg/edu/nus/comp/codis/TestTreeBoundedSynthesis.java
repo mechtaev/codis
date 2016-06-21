@@ -146,6 +146,33 @@ public class TestTreeBoundedSynthesis {
 
 
     @Test
+    public void testForbiddenDoubleNegation() {
+        Multiset<Node> components = HashMultiset.create();
+        components.add(x);
+        components.add(Components.MINUS, 2);
+        components.add(Components.ADD);
+
+        ArrayList<TestCase> testSuite = new ArrayList<>();
+        Map<ProgramVariable, Node> assignment1 = new HashMap<>();
+        assignment1.put(x, IntConst.of(2));
+        testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(2)));
+
+        List<Program> forbidden = new ArrayList<>();
+        forbidden.add(Program.leaf(new Component(x)));
+
+        Map<Hole, Program> args = new HashMap<>();
+        args.put((Hole)Components.MINUS.getArg(), Program.leaf(new Component(x)));
+        Map<Hole, Program> args2 = new HashMap<>();
+        args2.put((Hole)Components.MINUS.getArg(), Program.app(new Component(Components.MINUS), args));
+        forbidden.add(Program.app(new Component(Components.MINUS), args2));
+
+        Synthesis synthesizerWithForbidden = new TreeBoundedSynthesis(MathSAT.buildInterpolatingSolver(), 3, true, forbidden);
+        Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerWithForbidden.synthesize(testSuite, components);
+        assertFalse(result.isPresent());
+    }
+
+
+    @Test
     public void testForbiddenITE() {
         Multiset<Node> components = HashMultiset.create();
         components.add(x);

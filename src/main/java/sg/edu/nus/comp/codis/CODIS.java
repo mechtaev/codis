@@ -104,17 +104,16 @@ public class CODIS extends SynthesisWithLearning {
 
     private void logSearchTreeNode(SearchTreeNode n) {
         logger.info("Program: " + n.program.getLeft().getSemantics(n.program.getRight()));
-        logger.info("Used: " + n.program.getLeft().getComponents());
-        List<Component> flattenedComponents = n.remainingComponents.stream().map(Component::new).collect(Collectors.toList());
-        logger.info("Remaining: " + flattenedComponents);
-        logger.info("Fixed: " + n.fixed);
-        logger.info("Failing: " + n.failing);
-        logger.info("Remaining: " + n.remainingTests);
-        logger.info("Leaf: " + n.leaf);
-        logger.info("Test: " + n.test);
+        //logger.info("Used: " + n.program.getLeft().getComponents());
+        //List<Component> flattenedComponents = n.remainingComponents.stream().map(Component::new).collect(Collectors.toList());
+        //logger.info("Remaining: " + flattenedComponents);
+        //logger.info("Fixed: " + n.fixed);
+        //logger.info("Failing: " + n.failing);
+        //logger.info("Remaining: " + n.remainingTests);
+        //logger.info("Leaf: " + n.leaf);
+        //logger.info("Test: " + n.test);
         logger.info("Fixed/Failing: " + n.fixed.size() + "/" + n.failing.size());
-        logger.info("Explored: " + n.explored);
-
+        //logger.info("Explored: " + n.explored);
     }
 
     private class SynthesisContext extends TestCase {
@@ -186,6 +185,8 @@ public class CODIS extends SynthesisWithLearning {
         conflicts = new HashMap<>();
         Stack<SearchTreeNode> synthesisSequence = new Stack<>();
 
+        Set<String> history = new HashSet<>();
+
         //FIXME: should start from an empty program, because leaf program is not always possible
 
         TreeBoundedSynthesis initialSynthesizer = new TreeBoundedSynthesis(iSolver, 1, true);
@@ -211,8 +212,6 @@ public class CODIS extends SynthesisWithLearning {
 
         while (!synthesisSequence.isEmpty()) {
             SearchTreeNode current = synthesisSequence.pop();
-            logger.info("------- Stack: " + synthesisSequence.size() + " --------");
-            logSearchTreeNode(current);
 
             List<TestCase> newFixed = new ArrayList<>(current.fixed);
             newFixed.add(current.test);
@@ -265,6 +264,16 @@ public class CODIS extends SynthesisWithLearning {
             SearchTreeNode newNode =
                     chooseNextLeaf(
                             new SearchTreeNode(next, newComponents, newFixed, newFailing, null, newLeaves, null, newFailing, new ArrayList<Program>()));
+
+            logSearchTreeNode(newNode);
+
+            String repr = newNode.program.getLeft().getSemantics(newNode.program.getRight()).toString();
+            if (history.contains(repr)) {
+                logger.warn("REPETITION");
+            } else {
+                history.add(repr);
+            }
+
             synthesisSequence.push(newNode);
         }
 
