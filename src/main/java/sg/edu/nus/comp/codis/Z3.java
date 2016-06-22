@@ -194,10 +194,11 @@ public class Z3 implements Solver, InterpolatingSolver {
             BoolExpr pat = globalIContext.mkAnd(globalIContext.MkInterpolant(left), right);
             Params params = globalIContext.mkParams();
 
-            Expr proof = iSolver.getProof();
-            Expr[] interps = globalIContext.GetInterpolant(proof, pat, params);
+            //Expr proof = iSolver.getProof();
+            //Expr[] interps = globalIContext.GetInterpolant(proof, pat, params);
             //System.out.println("\nOK, the interpolant is: " + interps[0]);
-            return Either.right(convertZ3ToNode(interps[0], marshaller));
+            //return Either.right(convertZ3ToNode(interps[0], marshaller));
+            return Either.right(new Dummy(BoolType.TYPE));
         } else {
             throw new UnsupportedOperationException();
         }
