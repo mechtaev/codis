@@ -2,6 +2,7 @@ package sg.edu.nus.comp.codis.ast.theory;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import sg.edu.nus.comp.codis.ast.BottomUpMemoVisitor;
 import sg.edu.nus.comp.codis.ast.BottomUpVisitor;
 import sg.edu.nus.comp.codis.ast.Node;
 import sg.edu.nus.comp.codis.ast.TopDownVisitor;
@@ -32,6 +33,16 @@ public class BVNeg extends UnaryOp {
     public void accept(TopDownVisitor visitor) {
         visitor.visit(this);
         arg.accept(visitor);
+    }
+
+    @Override
+    public void accept(BottomUpMemoVisitor visitor) {
+        if (visitor.alreadyVisited(this)) {
+            visitor.visitAgain(this);
+        } else {
+            arg.accept(visitor);
+            visitor.visit(this);
+        }
     }
 
     @Override

@@ -1,5 +1,10 @@
 package sg.edu.nus.comp.codis.ast;
 
+import sg.edu.nus.comp.codis.ast.theory.And;
+import sg.edu.nus.comp.codis.ast.theory.BoolConst;
+import sg.edu.nus.comp.codis.ast.theory.Or;
+
+import java.util.List;
 import java.util.function.Predicate;
 
 /**
@@ -8,6 +13,7 @@ import java.util.function.Predicate;
 public abstract class Node {
     public abstract void accept(BottomUpVisitor visitor);
     public abstract void accept(TopDownVisitor visitor);
+    public abstract void accept(BottomUpMemoVisitor visitor);
 
     /**
      * Rename variables under condition
@@ -45,4 +51,21 @@ public abstract class Node {
         });
         return seen;
     }
+
+    public static Node disjunction(List<? extends Node> clauses) {
+        Node node = BoolConst.FALSE;
+        for (Node clause : clauses) {
+            node = new Or(node, clause);
+        }
+        return node;
+    }
+
+    public static Node conjunction(List<? extends Node> clauses) {
+        Node node = BoolConst.TRUE;
+        for (Node clause : clauses) {
+            node = new And(node, clause);
+        }
+        return node;
+    }
+
 }

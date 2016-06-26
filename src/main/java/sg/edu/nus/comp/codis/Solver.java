@@ -16,4 +16,5 @@ import java.util.Optional;
 public interface Solver {
     Either<Map<Variable, Constant>, List<Node>> getModelOrCore(List<Node> clauses, List<Node> assumptions);
     Optional<Map<Variable, Constant>> getModel(List<Node> clauses);
+    boolean check(List<Node> clauses);
 }

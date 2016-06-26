@@ -2,10 +2,7 @@ package sg.edu.nus.comp.codis.ast.theory;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import sg.edu.nus.comp.codis.ast.BottomUpVisitor;
-import sg.edu.nus.comp.codis.ast.Application;
-import sg.edu.nus.comp.codis.ast.Node;
-import sg.edu.nus.comp.codis.ast.TopDownVisitor;
+import sg.edu.nus.comp.codis.ast.*;
 
 import java.util.ArrayList;
 
@@ -44,13 +41,23 @@ public class Add extends BinaryOp {
     }
 
     @Override
+    public void accept(BottomUpMemoVisitor visitor) {
+        if (visitor.alreadyVisited(this)) {
+            visitor.visitAgain(this);
+        } else {
+            left.accept(visitor);
+            right.accept(visitor);
+            visitor.visit(this);
+        }
+    }
+
+    @Override
     public ArrayList<Node> getArgs() {
         ArrayList<Node> result = new ArrayList<>();
         result.add(left);
         result.add(right);
         return result;
     }
-
 
     @Override
     public boolean equals(Object obj) {

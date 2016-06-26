@@ -16,7 +16,7 @@ import java.util.Optional;
 public class TestDrivenSynthesis implements Synthesis {
 
     @Override
-    public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,
+    public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<? extends TestCase> testSuite,
                                                                         Multiset<Node> components) {
         throw new UnsupportedOperationException();
     }

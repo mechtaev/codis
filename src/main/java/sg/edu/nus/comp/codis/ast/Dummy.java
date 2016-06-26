@@ -30,6 +30,15 @@ public class Dummy extends Variable {
     }
 
     @Override
+    public void accept(BottomUpMemoVisitor visitor) {
+        if (visitor.alreadyVisited(this)) {
+            visitor.visitAgain(this);
+        } else {
+            visitor.visit(this);
+        }
+    }
+
+    @Override
     public String toString() {
         return "Dummy";
     }

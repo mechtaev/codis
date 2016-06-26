@@ -25,7 +25,7 @@ public class CEGIS implements Synthesis {
     }
 
     @Override
-    public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,
+    public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<? extends TestCase> testSuite,
                                                                         Multiset<Node> components) {
         assert testSuite.size() > 0;
 

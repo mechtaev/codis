@@ -17,11 +17,11 @@ public abstract class SynthesisWithLearning implements Synthesis {
     /**
      * @return either program and parameter valuation or conflict
      */
-    public abstract Either<Pair<Program, Map<Parameter, Constant>>, Node> synthesizeOrLearn(List<TestCase> testSuite,
+    public abstract Either<Pair<Program, Map<Parameter, Constant>>, Node> synthesizeOrLearn(List<? extends TestCase> testSuite,
                                                                                             Multiset<Node> components);
 
 
-    public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite,
+    public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<? extends TestCase> testSuite,
                                                                         Multiset<Node> components) {
         Either<Pair<Program, Map<Parameter, Constant>>, Node> result = synthesizeOrLearn(testSuite, components);
         if (result.isRight()) {

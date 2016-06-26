@@ -26,8 +26,8 @@ public class TestTreeBoundedSynthesis {
 
     @BeforeClass
     public static void initSolver() {
-        synthesizer = new TreeBoundedSynthesis(Z3.buildInterpolatingSolver(), 2, false);
-        synthesizerUnique = new TreeBoundedSynthesis(Z3.buildInterpolatingSolver(), 2, true);
+        synthesizer = new TreeBoundedSynthesis(Z3.buildInterpolatingSolver(), new TBSConfig(2).disableUniqueUsage());
+        synthesizerUnique = new TreeBoundedSynthesis(Z3.buildInterpolatingSolver(), new TBSConfig(2));
     }
 
     private final ProgramVariable x = ProgramVariable.mkInt("x");
@@ -82,7 +82,8 @@ public class TestTreeBoundedSynthesis {
         args.put((Hole)Components.ADD.getRight(), Program.leaf(new Component(y)));
         forbidden.add(Program.app(new Component(Components.ADD), args));
 
-        Synthesis synthesizerWithForbidden = new TreeBoundedSynthesis(Z3.buildInterpolatingSolver(), 2, false, forbidden);
+        Synthesis synthesizerWithForbidden =
+                new TreeBoundedSynthesis(Z3.buildInterpolatingSolver(), new TBSConfig(2).disableUniqueUsage().setForbidden(forbidden));
         Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerWithForbidden.synthesize(testSuite, components);
         assertTrue(result.isPresent());
         Node node = result.get().getLeft().getSemantics(result.get().getRight());
@@ -117,7 +118,8 @@ public class TestTreeBoundedSynthesis {
         forbidden.add(Program.app(new Component(Components.ADD), args));
         forbidden.add(Program.app(new Component(Components.ADD), args2));
 
-        Synthesis synthesizerWithForbidden = new TreeBoundedSynthesis(Z3.buildInterpolatingSolver(), 2, false, forbidden);
+        Synthesis synthesizerWithForbidden =
+                new TreeBoundedSynthesis(Z3.buildInterpolatingSolver(), new TBSConfig(2).disableUniqueUsage().setForbidden(forbidden));
         Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerWithForbidden.synthesize(testSuite, components);
         assertFalse(result.isPresent());
     }
@@ -139,7 +141,8 @@ public class TestTreeBoundedSynthesis {
         List<Program> forbidden = new ArrayList<>();
         forbidden.add(Program.leaf(new Component(p)));
 
-        Synthesis synthesizerWithForbidden = new TreeBoundedSynthesis(MathSAT.buildInterpolatingSolver(), 2, true, forbidden);
+        Synthesis synthesizerWithForbidden =
+                new TreeBoundedSynthesis(MathSAT.buildInterpolatingSolver(), new TBSConfig(2).setForbidden(forbidden));
         Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerWithForbidden.synthesize(testSuite, components);
         assertFalse(result.isPresent());
     }
@@ -166,7 +169,8 @@ public class TestTreeBoundedSynthesis {
         args2.put((Hole)Components.MINUS.getArg(), Program.app(new Component(Components.MINUS), args));
         forbidden.add(Program.app(new Component(Components.MINUS), args2));
 
-        Synthesis synthesizerWithForbidden = new TreeBoundedSynthesis(MathSAT.buildInterpolatingSolver(), 3, true, forbidden);
+        Synthesis synthesizerWithForbidden =
+                new TreeBoundedSynthesis(MathSAT.buildInterpolatingSolver(), new TBSConfig(3).setForbidden(forbidden));
         Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerWithForbidden.synthesize(testSuite, components);
         assertFalse(result.isPresent());
     }
@@ -218,7 +222,8 @@ public class TestTreeBoundedSynthesis {
         forbidden.add(Program.app(new Component(Components.ITE), args));
         forbidden.add(Program.app(new Component(Components.ITE), args2));
 
-        Synthesis synthesizerWithForbidden = new TreeBoundedSynthesis(MathSAT.buildInterpolatingSolver(), 3, true, forbidden);
+        Synthesis synthesizerWithForbidden =
+                new TreeBoundedSynthesis(MathSAT.buildInterpolatingSolver(), new TBSConfig(3).setForbidden(forbidden));
         Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerWithForbidden.synthesize(testSuite, components);
         assertFalse(result.isPresent());
     }
@@ -237,7 +242,7 @@ public class TestTreeBoundedSynthesis {
         testCase1.setId("t1");
         testSuite.add(testCase1);
 
-        Synthesis synthesizerWithForbidden = new TreeBoundedSynthesis(MathSAT.buildInterpolatingSolver(), 3, true);
+        Synthesis synthesizerWithForbidden = new TreeBoundedSynthesis(MathSAT.buildInterpolatingSolver(), new TBSConfig(3));
         Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerWithForbidden.synthesize(testSuite, components);
         assertTrue(result.isPresent());
     }
@@ -278,7 +283,8 @@ public class TestTreeBoundedSynthesis {
         List<Program> forbidden = new ArrayList<>();
         forbidden.add(Program.app(new Component(Components.ADD), args));
 
-        Synthesis synthesizerWithForbidden = new TreeBoundedSynthesis(MathSAT.buildInterpolatingSolver(), 3, true, forbidden);
+        Synthesis synthesizerWithForbidden =
+                new TreeBoundedSynthesis(MathSAT.buildInterpolatingSolver(), new TBSConfig(3).setForbidden(forbidden));
         Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerWithForbidden.synthesize(testSuite, components);
         assertFalse(result.isPresent());
     }
@@ -308,7 +314,8 @@ public class TestTreeBoundedSynthesis {
         args.put((Hole)Components.ADD.getRight(), Program.leaf(new Component(y)));
         forbidden.add(Program.app(new Component(Components.SUB), args));
 
-        Synthesis synthesizerWithForbidden = new TreeBoundedSynthesis(Z3.buildInterpolatingSolver(), 2, false, forbidden);
+        Synthesis synthesizerWithForbidden =
+                new TreeBoundedSynthesis(Z3.buildInterpolatingSolver(), new TBSConfig(2).disableUniqueUsage().setForbidden(forbidden));
         Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerWithForbidden.synthesize(testSuite, components);
         assertTrue(result.isPresent());
         Node node = result.get().getLeft().getSemantics(result.get().getRight());

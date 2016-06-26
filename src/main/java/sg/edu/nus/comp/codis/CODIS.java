@@ -8,7 +8,9 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sg.edu.nus.comp.codis.ast.*;
+import sg.edu.nus.comp.codis.ast.theory.BoolConst;
 import sg.edu.nus.comp.codis.ast.theory.Equal;
+import sg.edu.nus.comp.codis.ast.theory.Not;
 
 import java.util.*;
 
@@ -19,18 +21,17 @@ public class CODIS extends SynthesisWithLearning {
 
     private Logger logger = LoggerFactory.getLogger(CODIS.class);
 
-    private int incrementBound;
     private Tester tester;
     private InterpolatingSolver iSolver;
-    private Optional<Integer> totalBound;
+    private Solver solver;
 
-    private Map<Multiset<Node>, Node> conflicts;
+    private CODISConfig config;
 
-    public CODIS(Solver solver, InterpolatingSolver iSolver, int incrementBound, Optional<Integer> totalBound) {
-        this.incrementBound = incrementBound;
+    public CODIS(Solver solver, InterpolatingSolver iSolver, CODISConfig config) {
+        this.solver = solver;
+        this.config = config;
         this.tester = new Tester(solver);
         this.iSolver = iSolver;
-        this.totalBound = totalBound;
     }
 
     private Multiset<Node> remainingComponents(Multiset<Node> total, Program p) {
@@ -115,11 +116,12 @@ public class CODIS extends SynthesisWithLearning {
         //logger.info("Explored: " + n.explored);
     }
 
-    private class SynthesisContext extends TestCase {
+    protected class SynthesisContext extends TestCase {
 
         private TestCase outerTest;
         private Pair<Program, Map<Parameter, Constant>> context;
         private Variable globalOutput;
+        private Component leaf;
 
         SynthesisContext(TestCase outerTest, Pair<Program, Map<Parameter, Constant>> context, Component leaf) {
             this.outerTest = outerTest;
@@ -128,7 +130,9 @@ public class CODIS extends SynthesisWithLearning {
             this.globalOutput = new ProgramOutput(outerTest.getOutputType());
         }
 
-        private Component leaf;
+        public TestCase getOuterTest() {
+            return outerTest;
+        }
 
         @Override
         public List<Node> getConstraints(Variable output) {
@@ -138,15 +142,15 @@ public class CODIS extends SynthesisWithLearning {
 
             Map<Component, Program> mapping = new HashMap<>();
             mapping.put(leaf, Program.leaf(new Component(output)));
-            Node substituted = context.getLeft().substitute(mapping).getSemantics(context.getRight());
-            Node contextClause = new Equal(globalOutput, substituted);
+            Program substituted = context.getLeft().substitute(mapping);
+            Node contextClause = new Equal(globalOutput, substituted.getSemantics(context.getRight()));
             constraints.add(contextClause);
 
-            //NOTE: I need to relax constraints for parameters that are only used in the leaf
+            //NOTE: I need to relax constraints for parameters that are not used or only used in the leaf
             for (Map.Entry<Parameter, Constant> parameterConstantEntry : context.getRight().entrySet()) {
                 Parameter p = parameterConstantEntry.getKey();
                 Constant v = parameterConstantEntry.getValue();
-                if (leaf.getSemantics().contains(p) && !substituted.contains(p)) {
+                if (!substituted.getSemantics().contains(p)) {
                     continue;
                 }
                 constraints.add(new Equal(p, v));
@@ -161,7 +165,7 @@ public class CODIS extends SynthesisWithLearning {
         }
     }
 
-    private List<TestCase> getFailing(Pair<Program, Map<Parameter, Constant>> p, List<TestCase> t) {
+    private List<TestCase> getFailing(Pair<Program, Map<Parameter, Constant>> p, List<? extends TestCase> t) {
         List<TestCase> failing = new ArrayList<>();
         for (TestCase testCase : t) {
             if (!tester.isPassing(p.getLeft(), p.getRight(), testCase)) {
@@ -189,22 +193,22 @@ public class CODIS extends SynthesisWithLearning {
 
     /**
      * TODO:
-     * 1. Handle parameters more correctly (when they are parts of components)
-     * 2. Memorize explored programs
-     * 3. Ensure that each component is used once at each iteration
-     * 4. Current procedure is not exhaustive
+     * 1. Am I handling parameters correctly when they are parts of components?
+     * Not actually. At least if a parameter is both in context and components, then conflict should depend on this parameter
+     * 2. In which direction should I compute interpolants?
+     * 3. Prioritize expansions (by number of fixed tests (divide by 2?), by size, etc)
+     * 5. Merge choosing steps
+     * 6. Should start from an empty program, because leaf program is not always possible
      */
     @Override
-    public Either<Pair<Program, Map<Parameter, Constant>>, Node> synthesizeOrLearn(List<TestCase> testSuite,
+    public Either<Pair<Program, Map<Parameter, Constant>>, Node> synthesizeOrLearn(List<? extends TestCase> testSuite,
                                                                                    Multiset<Node> components) {
-        conflicts = new HashMap<>();
+        ConflictDatabase conflicts = new ConflictDatabase(components);
         Stack<SearchTreeNode> synthesisSequence = new Stack<>();
 
         Set<String> history = new HashSet<>();
 
-        //FIXME: should start from an empty program, because leaf program is not always possible
-
-        TreeBoundedSynthesis initialSynthesizer = new TreeBoundedSynthesis(iSolver, 1, true);
+        TreeBoundedSynthesis initialSynthesizer = new TreeBoundedSynthesis(iSolver, new TBSConfig(1));
         List<TestCase> initialTestSuite = new ArrayList<>();
         initialTestSuite.add(testSuite.get(0));
         Pair<Program, Map<Parameter, Constant>> initial = initialSynthesizer.synthesize(initialTestSuite, components).get();
@@ -225,13 +229,26 @@ public class CODIS extends SynthesisWithLearning {
                         new SearchTreeNode(initial, remaining, fixed, failing, null, initial.getLeft().getLeaves(), null, failing, new ArrayList<>()));
         synthesisSequence.push(first);
 
+        TBSConfig tbsConfig = new TBSConfig(config.incrementBound);
+        if (config.conciseInterpolants) {
+            tbsConfig.enableConciseInterpolants();
+        }
+        if (config.invertedLearning) {
+            tbsConfig.enableInvertedLearning();
+        }
+
+        Map<Type, ProgramOutput> conflictVariables = new HashMap<>();
+
+        int synthesized = 1;
+        int subsumed = 1;
+
         while (!synthesisSequence.isEmpty()) {
             SearchTreeNode current = synthesisSequence.pop();
 
             List<TestCase> newFixed = new ArrayList<>(current.fixed);
             newFixed.add(current.test);
 
-            List<TestCase> contextTestSuite = new ArrayList<>();
+            List<SynthesisContext> contextTestSuite = new ArrayList<>();
             for (TestCase testCase : newFixed) {
                 contextTestSuite.add(new SynthesisContext(testCase, current.program, current.leaf));
             }
@@ -240,19 +257,103 @@ public class CODIS extends SynthesisWithLearning {
             remainingWithRemovedLeaf.addAll(current.remainingComponents);
             remainingWithRemovedLeaf.add(current.leaf.getSemantics());
 
-            int bound;
-            if (totalBound.isPresent()) {
-                bound = Math.min(this.incrementBound, totalBound.get() - leafDepth(current.program.getLeft(), current.leaf) + 1);
+            boolean restricted;
+            if (config.totalBound.isPresent()) {
+                restricted = true;
+                int budget = config.totalBound.get() - leafDepth(current.program.getLeft(), current.leaf) + 1;
+                tbsConfig.setBound(Math.min(config.incrementBound, budget));
             } else {
-                bound = this.incrementBound;
+                restricted = false;
+                tbsConfig.setBound(config.incrementBound);
             }
 
-            TreeBoundedSynthesis synthesizer = new TreeBoundedSynthesis(iSolver, bound, true, current.explored);
+            tbsConfig.setForbidden(current.explored);
+            TreeBoundedSynthesis synthesizer = new TreeBoundedSynthesis(iSolver, tbsConfig);
+
+            Type leafType = TypeInference.typeOf(current.leaf);
+
+            boolean isSubsumed = false;
+
+            if (config.conflictLearning && !restricted) {
+                List<Node> relevantConflicts = conflicts.query(remainingWithRemovedLeaf);
+                if (!relevantConflicts.isEmpty()) {
+
+                    List<Node> clauses = new ArrayList<>();
+
+                    for (SynthesisContext testCase : contextTestSuite) {
+                        ProgramOutput output = conflictVariables.get(leafType);
+                        List<Node> testClauses = testCase.getConstraints(output);
+                        for (Node testClause : testClauses) {
+                            clauses.add(testClause.instantiate(testCase.getOuterTest()));
+                        }
+                    }
+
+                    boolean result;
+                    if (config.checkSubstitutionExists) {
+                        result = solver.check(clauses);
+                    } else {
+                        result = true;
+                    }
+                    if (result) {
+
+                        Node conflict;
+                        if (config.invertedLearning) {
+                            conflict = Node.conjunction(relevantConflicts);
+                        } else {
+                            conflict = new Not(Node.disjunction(relevantConflicts));
+                        }
+                        clauses.add(conflict);
+
+                        if (solver instanceof MathSAT) {
+                            ((MathSAT) solver).enableMemoization();
+                        }
+                        result = solver.check(clauses);
+                        if (solver instanceof MathSAT) {
+                            ((MathSAT) solver).disableMemoization();
+                        }
+                        if (!result) {
+                            subsumed++;
+                            //temporary:
+                            isSubsumed = true;
+                            result = true;
+                            //logger.info("SUBSUMED");
+                        }
+                    }
+                    if (!result) {
+                        if (!current.remainingTests.isEmpty()) {
+                            synthesisSequence.push(chooseNextTest(current));
+                        } else if (!current.remainingLeaves.isEmpty()) {
+                            synthesisSequence.push(chooseNextLeaf(current));
+                        }
+                        continue;
+                    }
+                }
+            }
+
+            if (!conflictVariables.containsKey(leafType)) {
+                ProgramOutput output = new ProgramOutput(leafType);
+                conflictVariables.put(leafType, output);
+                tbsConfig.setProgramOutput(leafType, output);
+            }
 
             Either<Pair<Program, Map<Parameter, Constant>>, Node> result =
                     synthesizer.synthesizeOrLearn(contextTestSuite, remainingWithRemovedLeaf);
 
             if (result.isRight()) {
+                Node conflict = result.right().value();
+                //FIXME: why do we get true and false?
+                //if (conflict.equals(BoolConst.FALSE)) logger.warn("FALSE");
+                //if (conflict.equals(BoolConst.TRUE)) logger.warn("TRUE");
+                if (config.conflictLearning && !conflict.equals(BoolConst.FALSE) && !conflict.equals(BoolConst.TRUE)) {
+//                    String print = Printer.print(conflict);
+//                    if (print.length() > 1000) {
+//                        print = "<too long>";
+//                    }
+//                    logger.info("learned conflict: " + print);
+//                    logger.info("for components: " + remainingWithRemovedLeaf);
+                    conflicts.insert(remainingWithRemovedLeaf, conflict);
+                }
+
                 if (!current.remainingTests.isEmpty()) {
                     synthesisSequence.push(chooseNextTest(current));
                 } else if (!current.remainingLeaves.isEmpty()) {
@@ -260,6 +361,12 @@ public class CODIS extends SynthesisWithLearning {
                 }
                 continue;
             }
+
+            if (isSubsumed) {
+                logger.error("WE HAVE SERIOUS PROBLEMS");
+            }
+
+            synthesized++;
 
             Pair<Program, Map<Parameter, Constant>> substitution = result.left().value();
 
@@ -276,6 +383,8 @@ public class CODIS extends SynthesisWithLearning {
 
             List<TestCase> newFailing = getFailing(next, testSuite);
             if (newFailing.isEmpty()) {
+                logger.info("Total synthesized: " + synthesized);
+                logger.info("Total subsumed: " + subsumed);
                 return Either.left(next);
             }
 
@@ -291,7 +400,7 @@ public class CODIS extends SynthesisWithLearning {
 
             String repr = newNode.program.getLeft().getSemantics(newNode.program.getRight()).toString();
             if (history.contains(repr)) {
-                logger.warn("REPETITION");
+                //logger.warn("REPETITION");
             } else {
                 history.add(repr);
             }

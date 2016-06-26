@@ -2,10 +2,7 @@ package sg.edu.nus.comp.codis.ast.theory;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import sg.edu.nus.comp.codis.ast.BottomUpVisitor;
-import sg.edu.nus.comp.codis.ast.Application;
-import sg.edu.nus.comp.codis.ast.Node;
-import sg.edu.nus.comp.codis.ast.TopDownVisitor;
+import sg.edu.nus.comp.codis.ast.*;
 
 import java.util.ArrayList;
 
@@ -36,6 +33,19 @@ public class UIFApplication extends Application {
             arg.accept(visitor);
         }
     }
+
+    @Override
+    public void accept(BottomUpMemoVisitor visitor) {
+        if (visitor.alreadyVisited(this)) {
+            visitor.visitAgain(this);
+        } else {
+            for (Node arg : args) {
+                arg.accept(visitor);
+            }
+            visitor.visit(this);
+        }
+    }
+
 
     public UIF getUIF() {
         return UIF;

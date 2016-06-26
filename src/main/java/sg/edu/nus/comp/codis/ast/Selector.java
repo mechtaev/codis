@@ -44,4 +44,14 @@ public class Selector extends Variable {
     public boolean isTestInstantiable() {
         return false;
     }
+
+    @Override
+    public void accept(BottomUpMemoVisitor visitor) {
+        if (visitor.alreadyVisited(this)) {
+            visitor.visitAgain(this);
+        } else {
+            visitor.visit(this);
+        }
+    }
+
 }

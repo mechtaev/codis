@@ -13,11 +13,83 @@ import java.util.Stack;
 public class TypeInference {
 
     public static Type typeOf(Node node) {
-        try {
-            return checkType(node); //FIXME: get type without type checking
-        } catch (TypeInferenceException e) {
-            throw new RuntimeException("failed to get type");
+        if (node instanceof Equal) {
+            Node left = ((BinaryOp) node).getLeft();
+            return typeOf(left);
         }
+
+        if (node instanceof Add ||
+                node instanceof Sub ||
+                node instanceof Mult ||
+                node instanceof Div ||
+                node instanceof Minus ||
+                node instanceof IntConst) {
+            return IntType.TYPE;
+        }
+
+        if (node instanceof And ||
+                node instanceof Or ||
+                node instanceof Iff ||
+                node instanceof Impl ||
+                node instanceof Greater ||
+                node instanceof Less ||
+                node instanceof GreaterOrEqual ||
+                node instanceof LessOrEqual ||
+                node instanceof Not ||
+                node instanceof BoolConst ||
+                node instanceof BVSignedGreater ||
+                node instanceof BVSignedGreaterOrEqual ||
+                node instanceof BVSignedLess ||
+                node instanceof BVSignedLessOrEqual ||
+                node instanceof BVUnsignedGreater ||
+                node instanceof BVUnsignedGreaterOrEqual ||
+                node instanceof BVUnsignedLess ||
+                node instanceof BVUnsignedLessOrEqual) {
+            return BoolType.TYPE;
+        }
+
+        if (node instanceof Variable) {
+            Variable variable = (Variable) node;
+            return variable.getType();
+        }
+
+        if (node instanceof ITE) {
+            Node thenBranch = ((ITE) node).getThenBranch();
+            return typeOf(thenBranch);
+        }
+
+        if (node instanceof BVConst) {
+            return ((BVConst) node).getType();
+        }
+
+        if (node instanceof BVAdd ||
+                node instanceof BVAnd ||
+                node instanceof BVMult ||
+                node instanceof BVOr ||
+                node instanceof BVShiftLeft ||
+                node instanceof BVSignedDiv ||
+                node instanceof BVSignedModulo ||
+                node instanceof BVSignedRemainder ||
+                node instanceof BVSignedShiftRight ||
+                node instanceof BVSub ||
+                node instanceof BVUnsignedDiv ||
+                node instanceof BVUnsignedRemainder ||
+                node instanceof BVUnsignedShiftRight ||
+                node instanceof BVNand ||
+                node instanceof BVXor ||
+                node instanceof BVNor ||
+                node instanceof BVXnor) {
+            Node left = ((BinaryOp) node).getLeft();
+            return typeOf(left);
+        }
+
+        if (node instanceof BVNeg ||
+                node instanceof BVNot) {
+            Node arg = ((UnaryOp) node).getArg();
+            return typeOf(arg);
+        }
+
+        throw new UnsupportedOperationException();
     }
 
     public static Type typeOf(Component component) {

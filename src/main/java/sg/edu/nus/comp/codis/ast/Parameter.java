@@ -76,4 +76,14 @@ public class Parameter extends Variable {
         visitor.visit(this);
     }
 
+    @Override
+    public void accept(BottomUpMemoVisitor visitor) {
+        if (visitor.alreadyVisited(this)) {
+            visitor.visitAgain(this);
+        } else {
+            visitor.visit(this);
+        }
+    }
+
+
 }

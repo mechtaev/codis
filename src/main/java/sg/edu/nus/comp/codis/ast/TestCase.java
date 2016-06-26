@@ -51,7 +51,7 @@ public abstract class TestCase {
             return id;
         }
         String repr = "{ ";
-        for (Node clause : this.getConstraints(new ProgramVariable("output", this.getOutputType()))) {
+        for (Node clause : this.getConstraints(new ProgramVariable("Result", this.getOutputType()))) {
             repr += clause + " ";
         }
         repr += "}";

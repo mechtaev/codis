@@ -2,10 +2,7 @@ package sg.edu.nus.comp.codis.ast.theory;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import sg.edu.nus.comp.codis.ast.BVType;
-import sg.edu.nus.comp.codis.ast.BottomUpVisitor;
-import sg.edu.nus.comp.codis.ast.Constant;
-import sg.edu.nus.comp.codis.ast.TopDownVisitor;
+import sg.edu.nus.comp.codis.ast.*;
 
 /**
  * Created by Sergey Mechtaev on 30/4/2016.
@@ -75,6 +72,16 @@ public class BVConst extends Constant {
     public void accept(TopDownVisitor visitor) {
         visitor.visit(this);
     }
+
+    @Override
+    public void accept(BottomUpMemoVisitor visitor) {
+        if (visitor.alreadyVisited(this)) {
+            visitor.visitAgain(this);
+        } else {
+            visitor.visit(this);
+        }
+    }
+
 
     @Override
     public String toString() {

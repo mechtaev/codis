@@ -8,12 +8,6 @@ import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.*;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -26,18 +20,28 @@ public class MathSAT implements Solver, InterpolatingSolver {
     private long config;
     private long solver = 0;
 
+    private boolean memoization = false;
+
     private MathSAT(boolean interpolating) {
         this.config = mathsat.api.msat_create_config();
         mathsat.api.msat_set_option(this.config, "model_generation", "true");
         if (interpolating) {
             mathsat.api.msat_set_option(this.config, "interpolation", "true");
         }
-        //mathsat.api.msat_set_option(this.config, "debug.api_call_trace", "1");
-        //mathsat.api.msat_set_option(this.config, "debug.api_call_trace_filename", "trace.smt2");
+        mathsat.api.msat_set_option(this.config, "debug.api_call_trace", "1");
+        mathsat.api.msat_set_option(this.config, "debug.api_call_trace_filename", "trace.smt2");
     }
 
-    private void reset() {
+    private void initialize() {
         this.solver = mathsat.api.msat_create_env(this.config);
+    }
+
+    public void enableMemoization() {
+        memoization = true;
+    }
+
+    public void disableMemoization() {
+        memoization = false;
     }
 
     public static Solver buildSolver() {
@@ -64,16 +68,16 @@ public class MathSAT implements Solver, InterpolatingSolver {
                                                                       List<Node> assumptions) {
 
         dispose();
-        reset();
+        initialize();
         VariableMarshaller marshaller = new VariableMarshaller();
         for (Node clause : clauses) {
-            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
+            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller, memoization);
             clause.accept(visitor);
             mathsat.api.msat_assert_formula(solver, visitor.getExpr());
         }
         ArrayList<Long> assumptionExprs = new ArrayList<>();
         for (Node assumption : assumptions) {
-            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
+            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller, memoization);
             assumption.accept(visitor);
             assumptionExprs.add(visitor.getExpr());
         }
@@ -199,10 +203,10 @@ public class MathSAT implements Solver, InterpolatingSolver {
     @Override
     public Optional<Map<Variable, Constant>> getModel(List<Node> clauses) {
         dispose();
-        reset();
+        initialize();
         VariableMarshaller marshaller = new VariableMarshaller();
         for (Node clause : clauses) {
-            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
+            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller, memoization);
             clause.accept(visitor);
             mathsat.api.msat_assert_formula(solver, visitor.getExpr());
         }
@@ -257,9 +261,29 @@ public class MathSAT implements Solver, InterpolatingSolver {
     }
 
     @Override
+    public boolean check(List<Node> clauses) {
+        dispose();
+        initialize();
+        VariableMarshaller marshaller = new VariableMarshaller();
+        for (Node clause : clauses) {
+            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller, memoization);
+            clause.accept(visitor);
+            mathsat.api.msat_assert_formula(solver, visitor.getExpr());
+        }
+        int status = mathsat.api.msat_solve(solver);
+        if (status == mathsat.api.MSAT_SAT) {
+            return true;
+        } else if (status == mathsat.api.MSAT_UNKNOWN) {
+            throw msatError();
+        } else {
+            return false;
+        }
+    }
+
+    @Override
     public Either<Map<Variable, Constant>, Node> getModelOrInterpolant(List<Node> leftClauses, List<Node> rightClauses) {
         dispose();
-        reset();
+        initialize();
 
         VariableMarshaller marshaller = new VariableMarshaller();
 
@@ -268,18 +292,22 @@ public class MathSAT implements Solver, InterpolatingSolver {
 
         mathsat.api.msat_set_itp_group(solver, groupA);
         for (Node leftClause : leftClauses) {
-            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
+            long expr;
+            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller, memoization);
             leftClause.accept(visitor);
-            int error = mathsat.api.msat_assert_formula(solver, visitor.getExpr());
+            expr = visitor.getExpr();
+            int error = mathsat.api.msat_assert_formula(solver, expr);
             assert (error == 0);
         }
 
         mathsat.api.msat_set_itp_group(solver, groupB);
 
         for (Node rightClause : rightClauses) {
-            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller);
+            long expr;
+            NodeTranslatorVisitor visitor = new NodeTranslatorVisitor(marshaller, memoization);
             rightClause.accept(visitor);
-            int error = mathsat.api.msat_assert_formula(solver, visitor.getExpr());
+            expr = visitor.getExpr();
+            int error = mathsat.api.msat_assert_formula(solver, expr);
             assert (error == 0);
         }
 
@@ -300,11 +328,13 @@ public class MathSAT implements Solver, InterpolatingSolver {
             int[] groupsOfA = {groupA};
             long interpolant = mathsat.api.msat_get_interpolant(solver, groupsOfA, 1);
             assert (!mathsat.api.MSAT_ERROR_TERM(interpolant));
-//            String s = mathsat.api.msat_to_smtlib2_term(solver, interpolant);
+            String s = mathsat.api.msat_to_smtlib2_term(solver, interpolant);
+            if (s.length() > 1000) {
+                //logger.warn("too long interpolant: " + s.length());
+                return Either.right(BoolConst.FALSE);
+            }
 //            System.out.println("\nOK, the interpolant is: " + s);
-            //TODO: convert to Node
-            //return Either.right(convertMathSATToNode(solver, interpolant, marshaller));
-            return Either.right(ProgramVariable.mkBool("<unknown>"));
+            return Either.right(convertMathSATToNode(solver, interpolant, marshaller));
         }
 
     }
@@ -319,126 +349,211 @@ public class MathSAT implements Solver, InterpolatingSolver {
     }
 
     private Node convertMathSATToNode(long solver, long expr, VariableMarshaller marshaller) {
+        mathsatToNodeMemo = new HashMap<>();
+        return convertAux(solver, expr, marshaller);
+    }
+
+    Map<Long, Node> mathsatToNodeMemo;
+
+    private Node convertAux(long solver, long expr, VariableMarshaller marshaller) {
+        if (mathsatToNodeMemo.containsKey(expr)) {
+            return mathsatToNodeMemo.get(expr);
+        }
         int[] sizeAux = new int[1];
         if (mathsat.api.msat_term_is_plus(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new Add(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            Add r = new Add(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_times(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new Mult(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            Mult r = new Mult(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_and(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new And(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            And r = new And(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_or(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new Or(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            Or r = new Or(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_iff(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new Iff(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            Iff r = new Iff(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_leq(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new LessOrEqual(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            LessOrEqual r = new LessOrEqual(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_equal(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new Equal(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            Equal r = new Equal(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_not(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new Not(convertMathSATToNode(solver, args[0], marshaller));
+            Not r = new Not(convertAux(solver, args[0], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_number(solver, expr) != 0
                 && mathsat.api.msat_is_integer_type(solver, mathsat.api.msat_term_get_type(expr)) != 0) {
-            return IntConst.of(Math.toIntExact(convertMathSATNumeral(solver, expr)));
+            IntConst r = IntConst.of(Math.toIntExact(convertMathSATNumeral(solver, expr)));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_constant(solver, expr) != 0) {
-            return marshaller.toVariable(mathsat.api.msat_decl_get_name(mathsat.api.msat_term_get_decl(expr)));
+            Variable r = marshaller.toVariable(api.msat_decl_get_name(api.msat_term_get_decl(expr)));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_true(solver, expr) != 0) {
-            return BoolConst.of(true);
+            BoolConst r = BoolConst.of(true);
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_false(solver, expr) != 0) {
-            return BoolConst.of(false);
+            BoolConst r = BoolConst.of(false);
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_term_ite(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new ITE(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller), convertMathSATToNode(solver, args[2], marshaller));
+            ITE r = new ITE(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller), convertAux(solver, args[2], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_number(solver, expr) != 0
                 && mathsat.api.msat_is_bv_type(solver, mathsat.api.msat_term_get_type(expr), null) != 0) {
-            return BVConst.ofLong(convertMathSATNumeral(solver, expr), sizeAux[0]);
+            BVConst r = BVConst.ofLong(convertMathSATNumeral(solver, expr), sizeAux[0]);
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_plus(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVAdd(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVAdd r = new BVAdd(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_sdiv(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVSignedDiv(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVSignedDiv r = new BVSignedDiv(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_udiv(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVUnsignedDiv(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVUnsignedDiv r = new BVUnsignedDiv(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_times(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVMult(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVMult r = new BVMult(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_minus(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVSub(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVSub r = new BVSub(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_neg(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVNeg(convertMathSATToNode(solver, args[0], marshaller));
+            BVNeg r = new BVNeg(convertAux(solver, args[0], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_and(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVAnd(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVAnd r = new BVAnd(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_or(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVOr(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVOr r = new BVOr(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_xor(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVXor(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVXor r = new BVXor(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_not(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVNot(convertMathSATToNode(solver, args[0], marshaller));
+            BVNot r = new BVNot(convertAux(solver, args[0], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
 
         } else if (mathsat.api.msat_term_is_bv_lshl(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVShiftLeft(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVShiftLeft r = new BVShiftLeft(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_lshr(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVUnsignedShiftRight(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVUnsignedShiftRight r = new BVUnsignedShiftRight(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_ashr(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVSignedShiftRight(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVSignedShiftRight r = new BVSignedShiftRight(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_sdiv(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVSignedDiv(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVSignedDiv r = new BVSignedDiv(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_udiv(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVUnsignedDiv(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVUnsignedDiv r = new BVUnsignedDiv(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_srem(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVSignedRemainder(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVSignedRemainder r = new BVSignedRemainder(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_urem(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVUnsignedRemainder(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVUnsignedRemainder r = new BVUnsignedRemainder(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
 
         } else if (mathsat.api.msat_term_is_bv_slt(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVSignedLess(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVSignedLess r = new BVSignedLess(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_ult(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVUnsignedLess(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVUnsignedLess r = new BVUnsignedLess(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_sleq(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVSignedLessOrEqual(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVSignedLessOrEqual r = new BVSignedLessOrEqual(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         } else if (mathsat.api.msat_term_is_bv_uleq(solver, expr) != 0) {
             long[] args = getArgs(expr);
-            return new BVUnsignedLessOrEqual(convertMathSATToNode(solver, args[0], marshaller), convertMathSATToNode(solver, args[1], marshaller));
+            BVUnsignedLessOrEqual r = new BVUnsignedLessOrEqual(convertAux(solver, args[0], marshaller), convertAux(solver, args[1], marshaller));
+            mathsatToNodeMemo.put(expr, r);
+            return r;
         }
 
         throw new UnsupportedOperationException("failed to convert MathSAT formula: " + mathsat.api.msat_to_smtlib2_term(solver, expr));
     }
 
+    private class NodeTranslatorVisitor implements BottomUpMemoVisitor {
 
-    private class NodeTranslatorVisitor implements BottomUpVisitor {
+        private Map<Node, Long> nodeToMathsatMemo;
 
         private Stack<Long> exprs;
 
         private VariableMarshaller marshaller;
 
-        NodeTranslatorVisitor(VariableMarshaller marshaller) {
+        private boolean memoization;
+
+        NodeTranslatorVisitor(VariableMarshaller marshaller, boolean memoization) {
             this.marshaller = marshaller;
             this.exprs = new Stack<>();
+            nodeToMathsatMemo = new IdentityHashMap<>();
+            this.memoization = memoization;
         }
 
         long getExpr() {
@@ -448,22 +563,39 @@ public class MathSAT implements Solver, InterpolatingSolver {
 
         private void processVariable(Variable variable) {
             if (TypeInference.typeOf(variable).equals(IntType.TYPE)) {
-                pushExpr(getIntVar(marshaller.toString(variable)));
+                pushAndMemoExpr(getIntVar(marshaller.toString(variable)), variable);
             } else if (TypeInference.typeOf(variable).equals(BoolType.TYPE)) {
-                pushExpr(getBoolVar(marshaller.toString(variable)));
+                pushAndMemoExpr(getBoolVar(marshaller.toString(variable)), variable);
             }else if (TypeInference.typeOf(variable) instanceof BVType) {
                 int size = ((BVType) TypeInference.typeOf(variable)).getSize();
-                pushExpr(getBVVar(marshaller.toString(variable), size));
+                pushAndMemoExpr(getBVVar(marshaller.toString(variable), size), variable);
             } else {
                 throw new UnsupportedOperationException();
             }
         }
 
-        private void pushExpr(long e) {
+        private void pushAndMemoExpr(long e, Node node) {
             if (mathsat.api.MSAT_ERROR_TERM(e)) {
                 throw msatError();
             }
+            if (memoization) {
+                this.nodeToMathsatMemo.put(node, e);
+            }
             exprs.push(e);
+        }
+
+        @Override
+        public boolean alreadyVisited(Node node) {
+            if (memoization) {
+                return this.nodeToMathsatMemo.containsKey(node);
+            } else {
+                return false;
+            }
+        }
+
+        @Override
+        public void visitAgain(Node node) {
+            exprs.push(this.nodeToMathsatMemo.get(node));
         }
 
         @Override
@@ -487,9 +619,9 @@ public class MathSAT implements Solver, InterpolatingSolver {
             long right = exprs.pop();
             long left = exprs.pop();
             if (mathsat.api.msat_is_bool_type(solver, mathsat.api.msat_term_get_type(left)) != 0) {
-                pushExpr(mathsat.api.msat_make_iff(solver, left, right));
+                pushAndMemoExpr(mathsat.api.msat_make_iff(solver, left, right), equal);
             } else {
-                pushExpr(mathsat.api.msat_make_equal(solver, left, right));
+                pushAndMemoExpr(mathsat.api.msat_make_equal(solver, left, right), equal);
             }
         }
 
@@ -497,7 +629,7 @@ public class MathSAT implements Solver, InterpolatingSolver {
         public void visit(Add add) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_plus(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_plus(solver, left, right), add);
         }
 
         @Override
@@ -505,14 +637,14 @@ public class MathSAT implements Solver, InterpolatingSolver {
             long right = exprs.pop();
             long left = exprs.pop();
             long neg = mathsat.api.msat_make_number(solver, "-1");
-            pushExpr(mathsat.api.msat_make_plus(solver, left, mathsat.api.msat_make_times(solver, neg, right)));
+            pushAndMemoExpr(mathsat.api.msat_make_plus(solver, left, mathsat.api.msat_make_times(solver, neg, right)), sub);
         }
 
         @Override
         public void visit(Mult mult) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_times(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_times(solver, left, right), mult);
         }
 
         @Override
@@ -525,80 +657,80 @@ public class MathSAT implements Solver, InterpolatingSolver {
         public void visit(And and) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_and(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_and(solver, left, right), and);
         }
 
         @Override
         public void visit(Or or) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_or(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_or(solver, left, right), or);
         }
 
         @Override
         public void visit(Iff iff) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_iff(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_iff(solver, left, right), iff);
         }
 
         @Override
         public void visit(Impl impl) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_or(solver, mathsat.api.msat_make_not(solver, left), right));
+            pushAndMemoExpr(mathsat.api.msat_make_or(solver, mathsat.api.msat_make_not(solver, left), right), impl);
         }
 
         @Override
         public void visit(Greater greater) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_not(solver, mathsat.api.msat_make_leq(solver, left, right)));
+            pushAndMemoExpr(mathsat.api.msat_make_not(solver, mathsat.api.msat_make_leq(solver, left, right)), greater);
         }
 
         @Override
         public void visit(Less less) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_not(solver, mathsat.api.msat_make_leq(solver, right, left)));
+            pushAndMemoExpr(mathsat.api.msat_make_not(solver, mathsat.api.msat_make_leq(solver, right, left)), less);
         }
 
         @Override
         public void visit(GreaterOrEqual greaterOrEqual) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_leq(solver, right, left));
+            pushAndMemoExpr(mathsat.api.msat_make_leq(solver, right, left), greaterOrEqual);
         }
 
         @Override
         public void visit(LessOrEqual lessOrEqual) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_leq(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_leq(solver, left, right), lessOrEqual);
         }
 
         @Override
         public void visit(Minus minus) {
             long neg = mathsat.api.msat_make_number(solver, "-1");
-            pushExpr(mathsat.api.msat_make_times(solver, neg, exprs.pop()));
+            pushAndMemoExpr(mathsat.api.msat_make_times(solver, neg, exprs.pop()), minus);
         }
 
         @Override
         public void visit(Not not) {
-            pushExpr(mathsat.api.msat_make_not(solver, exprs.pop()));
+            pushAndMemoExpr(mathsat.api.msat_make_not(solver, exprs.pop()), not);
         }
 
         @Override
         public void visit(IntConst intConst) {
-            pushExpr(mathsat.api.msat_make_number(solver, Integer.toString(intConst.getValue())));
+            pushAndMemoExpr(mathsat.api.msat_make_number(solver, Integer.toString(intConst.getValue())), intConst);
         }
 
         @Override
         public void visit(BoolConst boolConst) {
             if (boolConst.getValue()) {
-                pushExpr(mathsat.api.msat_make_true(solver));
+                pushAndMemoExpr(mathsat.api.msat_make_true(solver), boolConst);
             } else {
-                pushExpr(mathsat.api.msat_make_false(solver));
+                pushAndMemoExpr(mathsat.api.msat_make_false(solver), boolConst);
             }
         }
 
@@ -637,7 +769,7 @@ public class MathSAT implements Solver, InterpolatingSolver {
             long elseBranch = exprs.pop();
             long thenBranch = exprs.pop();
             long condition = exprs.pop();
-            pushExpr(mathsat.api.msat_make_term_ite(solver, condition, thenBranch, elseBranch));
+            pushAndMemoExpr(mathsat.api.msat_make_term_ite(solver, condition, thenBranch, elseBranch), ite);
         }
 
         @Override
@@ -649,10 +781,10 @@ public class MathSAT implements Solver, InterpolatingSolver {
         public void visit(BVConst bvConst) {
             long value = bvConst.getLong();
             if (value < 0) {
-                pushExpr(mathsat.api.msat_make_bv_neg(solver,
-                        mathsat.api.msat_make_bv_number(solver, Long.toString(-value), bvConst.getType().getSize(), 10)));
+                pushAndMemoExpr(mathsat.api.msat_make_bv_neg(solver,
+                        mathsat.api.msat_make_bv_number(solver, Long.toString(-value), bvConst.getType().getSize(), 10)), bvConst);
             } else {
-                pushExpr(mathsat.api.msat_make_bv_number(solver, Long.toString(value), bvConst.getType().getSize(), 10));
+                pushAndMemoExpr(mathsat.api.msat_make_bv_number(solver, Long.toString(value), bvConst.getType().getSize(), 10), bvConst);
             }
         }
 
@@ -660,82 +792,82 @@ public class MathSAT implements Solver, InterpolatingSolver {
         public void visit(BVAdd bvAdd) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_plus(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_plus(solver, left, right), bvAdd);
         }
 
         @Override
         public void visit(BVAnd bvAnd) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_and(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_and(solver, left, right), bvAnd);
         }
 
         @Override
         public void visit(BVMult bvMult) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_times(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_times(solver, left, right), bvMult);
         }
 
         @Override
         public void visit(BVNeg bvNeg) {
             long arg = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_neg(solver, arg));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_neg(solver, arg), bvNeg);
         }
 
         @Override
         public void visit(BVNot bvNot) {
             long arg = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_not(solver, arg));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_not(solver, arg), bvNot);
         }
 
         @Override
         public void visit(BVOr bvOr) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_or(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_or(solver, left, right), bvOr);
         }
 
         @Override
         public void visit(BVShiftLeft bvShiftLeft) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_lshl(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_lshl(solver, left, right), bvShiftLeft);
         }
 
         @Override
         public void visit(BVSignedDiv bvSignedDiv) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_sdiv(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_sdiv(solver, left, right), bvSignedDiv);
         }
 
         @Override
         public void visit(BVSignedGreater bvSignedGreater) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_slt(solver, right, left)); //NOTE: change order
+            pushAndMemoExpr(mathsat.api.msat_make_bv_slt(solver, right, left), bvSignedGreater); //NOTE: change order
         }
 
         @Override
         public void visit(BVSignedGreaterOrEqual bvSignedGreaterOrEqual) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_sleq(solver, right, left)); //NOTE: change order
+            pushAndMemoExpr(mathsat.api.msat_make_bv_sleq(solver, right, left), bvSignedGreaterOrEqual); //NOTE: change order
         }
 
         @Override
         public void visit(BVSignedLess bvSignedLess) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_slt(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_slt(solver, left, right), bvSignedLess);
         }
 
         @Override
         public void visit(BVSignedLessOrEqual bvSignedLessOrEqual) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_sleq(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_sleq(solver, left, right), bvSignedLessOrEqual);
         }
 
         @Override
@@ -747,91 +879,91 @@ public class MathSAT implements Solver, InterpolatingSolver {
         public void visit(BVSignedRemainder bvSignedRemainder) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_srem(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_srem(solver, left, right), bvSignedRemainder);
         }
 
         @Override
         public void visit(BVSignedShiftRight bvSignedShiftRight) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_ashr(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_ashr(solver, left, right), bvSignedShiftRight);
         }
 
         @Override
         public void visit(BVSub bvSub) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_minus(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_minus(solver, left, right), bvSub);
         }
 
         @Override
         public void visit(BVUnsignedDiv bvUnsignedDiv) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_udiv(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_udiv(solver, left, right), bvUnsignedDiv);
         }
 
         @Override
         public void visit(BVUnsignedGreater bvUnsignedGreater) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_ult(solver, right, left)); //NOTE: change order
+            pushAndMemoExpr(mathsat.api.msat_make_bv_ult(solver, right, left), bvUnsignedGreater); //NOTE: change order
         }
 
         @Override
         public void visit(BVUnsignedGreaterOrEqual bvUnsignedGreaterOrEqual) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_uleq(solver, right, left)); //NOTE: change order
+            pushAndMemoExpr(mathsat.api.msat_make_bv_uleq(solver, right, left), bvUnsignedGreaterOrEqual); //NOTE: change order
         }
 
         @Override
         public void visit(BVUnsignedLess bvUnsignedLess) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_ult(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_ult(solver, left, right), bvUnsignedLess);
         }
 
         @Override
         public void visit(BVUnsignedLessOrEqual bvUnsignedLessOrEqual) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_uleq(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_uleq(solver, left, right), bvUnsignedLessOrEqual);
         }
 
         @Override
         public void visit(BVUnsignedRemainder bvUnsignedRemainder) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_urem(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_urem(solver, left, right), bvUnsignedRemainder);
         }
 
         @Override
         public void visit(BVUnsignedShiftRight bvUnsignedShiftRight) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_lshr(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_lshr(solver, left, right), bvUnsignedShiftRight);
         }
 
         @Override
         public void visit(BVNand bvNand) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_not(solver, mathsat.api.msat_make_bv_and(solver, left, right)));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_not(solver, mathsat.api.msat_make_bv_and(solver, left, right)), bvNand);
         }
 
         @Override
         public void visit(BVXor bvXor) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_xor(solver, left, right));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_xor(solver, left, right), bvXor);
         }
 
         @Override
         public void visit(BVNor bvNor) {
             long right = exprs.pop();
             long left = exprs.pop();
-            pushExpr(mathsat.api.msat_make_bv_not(solver, mathsat.api.msat_make_bv_or(solver, left, right)));
+            pushAndMemoExpr(mathsat.api.msat_make_bv_not(solver, mathsat.api.msat_make_bv_or(solver, left, right)), bvNor);
         }
 
         @Override

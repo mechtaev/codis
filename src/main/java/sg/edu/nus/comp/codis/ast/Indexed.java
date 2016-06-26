@@ -37,6 +37,15 @@ public class Indexed extends Variable {
     }
 
     @Override
+    public void accept(BottomUpMemoVisitor visitor) {
+        if (visitor.alreadyVisited(this)) {
+            visitor.visitAgain(this);
+        } else {
+            visitor.visit(this);
+        }
+    }
+
+    @Override
     public boolean equals(Object obj) {
         if (!(obj instanceof Indexed))
             return false;

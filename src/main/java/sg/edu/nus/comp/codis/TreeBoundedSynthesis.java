@@ -1,8 +1,6 @@
 package sg.edu.nus.comp.codis;
 
 import com.google.common.collect.Multiset;
-import com.sun.applet2.AppletParameters;
-import fj.P;
 import fj.data.Either;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -20,9 +18,7 @@ import java.util.stream.Collectors;
  */
 public class TreeBoundedSynthesis extends SynthesisWithLearning {
 
-    private int bound;
-    private boolean uniqueUsage;
-    private List<Program> globalForbidden;
+    private TBSConfig config;
 
     private Logger logger = LoggerFactory.getLogger(TreeBoundedSynthesis.class);
 
@@ -68,30 +64,26 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
     private InterpolatingSolver solver;
 
     // NOTE: now forbidden check prefixes if they are larger than size
-    public TreeBoundedSynthesis(InterpolatingSolver solver, int bound, boolean uniqueUsage, List<Program> forbidden) {
-        this.bound = bound;
+    public TreeBoundedSynthesis(InterpolatingSolver solver, TBSConfig config) {
         this.solver = solver;
-        this.uniqueUsage = uniqueUsage;
-        this.globalForbidden = forbidden;
-    }
-
-    public TreeBoundedSynthesis(InterpolatingSolver solver, int bound, boolean uniqueUsage) {
-        this.bound = bound;
-        this.solver = solver;
-        this.uniqueUsage = uniqueUsage;
-        this.globalForbidden = new ArrayList<>();
+        this.config = config;
     }
 
     @Override
-    public Either<Pair<Program, Map<Parameter, Constant>>, Node> synthesizeOrLearn(List<TestCase> testSuite,
+    public Either<Pair<Program, Map<Parameter, Constant>>, Node> synthesizeOrLearn(List<? extends TestCase> testSuite,
                                                                                    Multiset<Node> components) {
         List<Component> flattenedComponents = components.stream().map(Component::new).collect(Collectors.toList());
-        ProgramOutput root = new ProgramOutput(testSuite.get(0).getOutputType());
+        ProgramOutput root;
+        if (config.outputs.containsKey(testSuite.get(0).getOutputType())) {
+            root = config.outputs.get(testSuite.get(0).getOutputType());
+        } else {
+            root = new ProgramOutput(testSuite.get(0).getOutputType());
+        }
         // top level -> current level
         Map<Program, Program> initialForbidden =
-                globalForbidden.stream().collect(Collectors.toMap(Function.identity(), Function.identity()));
+                config.forbidden.stream().collect(Collectors.toMap(Function.identity(), Function.identity()));
 
-        Optional<EncodingResult> result = encodeBranch(root, bound, flattenedComponents, initialForbidden);
+        Optional<EncodingResult> result = encodeBranch(root, config.bound, flattenedComponents, initialForbidden);
 
         if (!result.isPresent()) {
             throw new IllegalArgumentException("wrong synthesis input");
@@ -100,7 +92,12 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
         List<Node> synthesisClauses = new ArrayList<>();
         for (TestCase test : testSuite) {
             for (Node node : result.get().clauses) {
-                synthesisClauses.add(node.instantiate(test));
+                if (test instanceof CODIS.SynthesisContext) {
+                    //this is a bad hack, because I want to pretend that conflicts are computed in the outer context
+                    synthesisClauses.add(node.instantiate(((CODIS.SynthesisContext) test).getOuterTest()));
+                } else {
+                    synthesisClauses.add(node.instantiate(test));
+                }
             }
             contextClauses.addAll(testToConstraint(test, root));
         }
@@ -109,28 +106,53 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
             if (!entry.getValue().isEmpty()) {
                 Node precondition;
                 if (result.get().branchDependencies.containsKey(entry.getKey())) {
-                    precondition = disjunction(result.get().branchDependencies.get(entry.getKey()));
+                    precondition = Node.disjunction(result.get().branchDependencies.get(entry.getKey()));
                 } else {
                     precondition = BoolConst.TRUE;
                 }
-                synthesisClauses.add(new Impl(precondition, disjunction(entry.getValue())));
+                synthesisClauses.add(new Impl(precondition, Node.disjunction(entry.getValue())));
             }
         }
         for (List<List<Selector>> selectors : result.get().forbiddenSelectors.values()) {
             if (!selectors.isEmpty()) {
                 synthesisClauses.add(
-                        disjunction(selectors.stream().map(l ->
-                                conjunction(l.stream().map(Not::new).collect(Collectors.toList()))).collect(Collectors.toList())));
+                        Node.disjunction(selectors.stream().map(l ->
+                                Node.conjunction(l.stream().map(Not::new).collect(Collectors.toList()))).collect(Collectors.toList())));
             }
         }
-        if (uniqueUsage) {
+        if (config.uniqueUsage) {
             for (Component component : flattenedComponents) {
                 if (result.get().componentUsage.containsKey(component)) {
                     synthesisClauses.addAll(Cardinality.pairwise(result.get().componentUsage.get(component)));
                 }
             }
         }
-        Either<Map<Variable, Constant>, Node> solverResult = solver.getModelOrInterpolant(contextClauses, synthesisClauses);
+
+        Either<Map<Variable, Constant>, Node> solverResult;
+        if (!config.conciseInterpolants) {
+            if (config.invertedLearning) {
+                solverResult = solver.getModelOrInterpolant(synthesisClauses, contextClauses);
+            } else {
+                solverResult = solver.getModelOrInterpolant(contextClauses, synthesisClauses);
+            }
+        } else {
+            List<Node> renamedContextClauses = new ArrayList<>();
+            List<Node> renamedSynthesisClauses = new ArrayList<>();
+            for (Node contextClause : contextClauses) {
+                renamedContextClauses.add(
+                        contextClause.index(0, c -> !(c instanceof TestInstance && ((TestInstance)c).getVariable().equals(root))));
+            }
+            renamedSynthesisClauses.addAll(synthesisClauses);
+            for (Node contextClause : contextClauses) {
+                renamedSynthesisClauses.add(
+                        contextClause.index(0, c -> c instanceof TestInstance && ((TestInstance)c).getVariable().equals(root)));
+            }
+            if (config.invertedLearning) {
+                solverResult = solver.getModelOrInterpolant(renamedSynthesisClauses, renamedContextClauses);
+            } else {
+                solverResult = solver.getModelOrInterpolant(renamedContextClauses, renamedSynthesisClauses);
+            }
+        }
         if (solverResult.isLeft()) {
             Pair<Program, Map<Parameter, Constant>> decoded = decode(solverResult.left().value(), root, result.get());
             return Either.left(decoded);
@@ -143,7 +165,12 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
         List<Node> clauses = new ArrayList<>();
         List<Node> testClauses = testCase.getConstraints(output);
         for (Node clause : testClauses) {
-            clauses.add(clause.instantiate(testCase));
+            if (testCase instanceof CODIS.SynthesisContext) {
+                //this is a bad hack, because I want to pretend that conflicts are computed in the outer context
+                clauses.add(clause.instantiate(((CODIS.SynthesisContext) testCase).getOuterTest()));
+            } else {
+                clauses.add(clause.instantiate(testCase));
+            }
         }
         return clauses;
     }
@@ -338,22 +365,6 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
         }
 
         return Optional.of(new EncodingResult(tree, nodeChoices, selectedComponent, branchDependencies, componentUsage, globalForbiddenResult, clauses));
-    }
-
-    private Node disjunction(List<? extends Node> clauses) {
-        Node node = BoolConst.FALSE;
-        for (Node clause : clauses) {
-            node = new Or(node, clause);
-        }
-        return node;
-    }
-
-    private Node conjunction(List<? extends Node> clauses) {
-        Node node = BoolConst.TRUE;
-        for (Node clause : clauses) {
-            node = new And(node, clause);
-        }
-        return node;
     }
 
     private Pair<Program, Map<Parameter, Constant>> decode(Map<Variable, Constant> assignment,

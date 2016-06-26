@@ -13,6 +13,6 @@ import java.util.Optional;
  */
 public interface Synthesis {
 
-    Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite, Multiset<Node> components);
+    Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<? extends TestCase> testSuite, Multiset<Node> components);
 
 }

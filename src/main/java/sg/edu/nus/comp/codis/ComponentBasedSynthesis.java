@@ -37,7 +37,7 @@ public class ComponentBasedSynthesis implements Synthesis {
     }
 
     @Override
-    public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<TestCase> testSuite, Multiset<Node> components) {
+    public Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<? extends TestCase> testSuite, Multiset<Node> components) {
         List<Component> flattenedComponents = components.stream().map(Component::new).collect(Collectors.toList());
         Type outputType = testSuite.get(0).getOutputType();
         Component result = new Component(new Hole("result", outputType, Node.class));
@@ -203,7 +203,7 @@ public class ComponentBasedSynthesis implements Synthesis {
         return clauses;
     }
 
-    public List<Node> encode(List<TestCase> testSuite, List<Component> components, Component result) {
+    public List<Node> encode(List<? extends TestCase> testSuite, List<Component> components, Component result) {
         List<Node> wfp = wellFormedness(components, result);
         List<Node> lib = library(components, result);
         List<Node> connections = connection(components, result);

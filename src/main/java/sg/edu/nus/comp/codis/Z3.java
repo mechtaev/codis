@@ -163,6 +163,11 @@ public class Z3 implements Solver, InterpolatingSolver {
     }
 
     @Override
+    public boolean check(List<Node> clauses) {
+        return getModel(clauses).isPresent();
+    }
+
+    @Override
     public Either<Map<Variable, Constant>, Node> getModelOrInterpolant(List<Node> leftClauses, List<Node> rightClauses) {
         iSolver.reset();
         VariableMarshaller marshaller = new VariableMarshaller();
