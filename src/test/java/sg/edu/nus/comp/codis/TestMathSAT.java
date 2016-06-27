@@ -18,13 +18,13 @@ import static org.junit.Assert.assertTrue;
 /**
  * Created by Sergey Mechtaev on 12/4/2016.
  */
-public class TestZ3 {
+public class TestMathSAT {
 
     private static Solver solver;
 
     @BeforeClass
     public static void initSolver() {
-        solver = Z3.buildSolver();
+        solver = MathSAT.buildSolver();
     }
 
     @Test

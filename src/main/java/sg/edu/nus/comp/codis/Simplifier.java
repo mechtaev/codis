@@ -104,6 +104,9 @@ public class Simplifier {
         simplificationRules.add(new RewriteRule(new Sub(intHole, intHole),
                 RewriteRule.transformInto(IntConst.of(0))));
 
+        simplificationRules.add(new RewriteRule(new Minus(new Minus(intHole)),
+                RewriteRule.transformInto(intHole)));
+
         simplificationRules.add(new RewriteRule(new Minus(new Sub(intHole, intHole2)),
                 RewriteRule.transformInto(new Sub(intHole2, intHole))));
 

@@ -14,6 +14,7 @@ import sg.edu.nus.comp.codis.ast.theory.Equal;
 import sg.edu.nus.comp.codis.ast.theory.Not;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Created by Sergey Mechtaev on 7/4/2016.
@@ -105,17 +106,18 @@ public class CODIS extends SynthesisWithLearning {
     }
 
 
-    private void logSearchTreeNode(SearchTreeNode n) {
-        logger.info("Program: " + n.program.getLeft().getSemantics(n.program.getRight()));
+    private void logSearchTreeNode(SearchTreeNode n, int iteration) {
+        logger.info("Iteration " + iteration +
+                " Score: "  + n.fixed.size() + "/" + n.failing.size() +
+                " Program: " + n.program.getLeft().getSemantics(n.program.getRight()));
         //logger.info("Used: " + n.program.getLeft().getComponents());
-        //List<Component> flattenedComponents = n.remainingComponents.stream().map(Component::new).collect(Collectors.toList());
+        List<Component> flattenedComponents = n.remainingComponents.stream().map(Component::new).collect(Collectors.toList());
         //logger.info("Remaining: " + flattenedComponents);
         //logger.info("Fixed: " + n.fixed);
         //logger.info("Failing: " + n.failing);
         //logger.info("Remaining: " + n.remainingTests);
         //logger.info("Leaf: " + n.leaf);
         //logger.info("Test: " + n.test);
-        logger.info("Fixed/Failing: " + n.fixed.size() + "/" + n.failing.size());
         //logger.info("Explored: " + n.explored);
     }
 
@@ -374,8 +376,7 @@ public class CODIS extends SynthesisWithLearning {
                     chooseNextLeaf(
                             new SearchTreeNode(next, newComponents, newFixed, newFailing, null, newLeaves, null, newFailing, new ArrayList<Program>()));
 
-            logger.info("Iteration: " + synthesisIteration);
-            logSearchTreeNode(newNode);
+            logSearchTreeNode(newNode, synthesisIteration);
 
 //            String repr = newNode.program.getLeft().getSemantics(newNode.program.getRight()).toString();
 //            if (history.contains(repr)) {
@@ -431,7 +432,7 @@ public class CODIS extends SynthesisWithLearning {
                 ((MathSAT) solver).disableMemoization();
             }
             if (!result) {
-                logger.info("SUBSUMED by " + conflicts.size() + " conflicts");
+                logger.debug("SUBSUMED by " + conflicts.size() + " conflicts");
             }
         }
 

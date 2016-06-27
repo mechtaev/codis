@@ -7,6 +7,7 @@ import org.junit.*;
 import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.*;
 
+import javax.print.attribute.standard.MediaSize;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,7 +28,7 @@ public class TestCBS {
 
     @BeforeClass
     public static void initSolver() {
-        Solver solver = Z3.buildSolver();
+        Solver solver = MathSAT.buildSolver();
         intSynthesizer = new ComponentBasedSynthesis(solver, false, Optional.empty());
         boundIntSynthesizer = new ComponentBasedSynthesis(solver, false, Optional.of(0));
         bvSynthesizer = new ComponentBasedSynthesis(solver, true, Optional.empty());

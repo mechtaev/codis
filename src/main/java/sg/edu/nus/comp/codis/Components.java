@@ -2,7 +2,6 @@ package sg.edu.nus.comp.codis;
 
 import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.*;
-import sun.invoke.util.BytecodeName;
 
 /**
  * Created by Sergey Mechtaev on 14/4/2016.

@@ -36,9 +36,13 @@ public class CEGIS implements Synthesis {
 
         Optional<Pair<Program, Map<Parameter, Constant>>> result = Optional.empty();
 
+        int iterationCount = 0;
+
         while(counterExample.isPresent()) {
+
+            iterationCount++;
             current.add(counterExample.get());
-            logger.info("Adding test " + counterExample.get());
+            logger.debug("Adding test " + counterExample.get());
 
             remaining.remove(counterExample.get());
             counterExample = Optional.empty();
@@ -49,8 +53,6 @@ public class CEGIS implements Synthesis {
                 logger.info("Failed");
                 return result;
             }
-
-            logger.info("Synthesized program: " + result.get().getLeft().getSemantics(result.get().getRight()));
 
             boolean counterExampleFound = false;
             int score = current.size();
@@ -64,7 +66,9 @@ public class CEGIS implements Synthesis {
                     score++;
                 }
             }
-            logger.info("Score: " + score + "/" + testSuite.size());
+            logger.info("Iteration "  + iterationCount +
+                    " Score: " + score +
+                    " Program: " + result.get().getLeft().getSemantics(result.get().getRight()));
         }
 
         logger.info("Succeeded");
