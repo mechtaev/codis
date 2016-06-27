@@ -3,7 +3,6 @@ package sg.edu.nus.comp.codis;
 import sg.edu.nus.comp.codis.ast.Program;
 import sg.edu.nus.comp.codis.ast.ProgramOutput;
 import sg.edu.nus.comp.codis.ast.Type;
-import sg.edu.nus.comp.codis.ast.Variable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,6 +24,7 @@ public class TBSConfig {
     protected boolean uniqueUsage = true;
     protected boolean conciseInterpolants = false;
     protected boolean invertedLearning = false;
+    protected boolean matchLeaves = true;
     protected List<Program> forbidden = new ArrayList<>();
     protected Map<Type, ProgramOutput> outputs = new HashMap<>();
 
@@ -45,6 +45,11 @@ public class TBSConfig {
 
     public TBSConfig enableInvertedLearning() {
         this.invertedLearning = true;
+        return this;
+    }
+
+    public TBSConfig disableLeafMatching() {
+        this.matchLeaves = false;
         return this;
     }
 

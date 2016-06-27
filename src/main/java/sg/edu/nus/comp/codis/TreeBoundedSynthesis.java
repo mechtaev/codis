@@ -251,10 +251,15 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
                     subnodeForbidden.put(child, new HashMap<>());
                     for (Program local : localForbidden) {
                         if (local.getRoot().getSemantics().equals(component.getSemantics())) {
-                            for (Program global : forbidden.keySet()) {
-                                if (forbidden.get(global).equals(local)) {
-                                    // NOTE: can be repetitions, but it is OK
-                                    subnodeForbidden.get(child).put(global, local.getChildren().get(input));
+                            if (config.matchLeaves ||
+                                    local.getChildren().values().stream().filter(p -> !p.isLeaf()).count() > 0) {
+                                for (Program global : forbidden.keySet()) {
+                                    if (forbidden.get(global).equals(local)) {
+                                        if (config.matchLeaves || !local.getChildren().get(input).isLeaf()) {
+                                            // NOTE: can be repetitions, but it is OK
+                                            subnodeForbidden.get(child).put(global, local.getChildren().get(input));
+                                        }
+                                    }
                                 }
                             }
                         }

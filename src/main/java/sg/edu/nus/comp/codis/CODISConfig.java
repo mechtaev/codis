@@ -19,6 +19,7 @@ public class CODISConfig {
     protected boolean conciseInterpolants = true;
     protected boolean checkExpansionSatisfiability = false;
     protected boolean invertedLearning = false;
+    protected boolean forbidStructure = false;
     protected Optional<Integer> iterationsBeforeRestart = Optional.empty();
     protected Optional<Integer> maximumLeafExpansions = Optional.empty();
     protected int maximumInterpolantSize = 100;
@@ -62,6 +63,11 @@ public class CODISConfig {
 
     public CODISConfig checkExpansionSatisfiability() {
         this.checkExpansionSatisfiability = true;
+        return this;
+    }
+
+    public CODISConfig forbidStructure() {
+        this.forbidStructure = true;
         return this;
     }
 

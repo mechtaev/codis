@@ -244,6 +244,9 @@ public class CODIS extends SynthesisWithLearning {
         if (config.invertedLearning) {
             tbsConfig.enableInvertedLearning();
         }
+        if (config.forbidStructure) {
+            tbsConfig.disableLeafMatching();
+        }
 
         int synthesisIteration = 0;
         int lastRestart = synthesisIteration;
