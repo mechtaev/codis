@@ -14,17 +14,49 @@ public class CODISConfig {
     }
 
     // default options:
-    protected Optional<Integer> totalBound = Optional.empty();
+    protected Optional<Integer> totalBound = Optional.empty(); //FIXME: this should be actually "skip expansion from depth"
     protected boolean conflictLearning = true;
-    protected boolean testBacktracking = true;
-    protected boolean transformationBacktracking = true;
     protected boolean conciseInterpolants = true;
     protected boolean checkExpansionSatisfiability = false;
     protected boolean invertedLearning = false;
+    protected Optional<Integer> iterationsBeforeRestart = Optional.empty();
+    protected Optional<Integer> maximumLeafExpansions = Optional.empty();
+    protected int maximumInterpolantSize = 100;
+    protected int maximumConflictsCheck = 20;
+
+    // Unsupported options:
+    protected boolean testBacktracking = true;
+    protected boolean transformationBacktracking = true;
+    protected int incrementalImprovement = 1;
 
 
     public CODISConfig setTotalBound(int bound) {
         this.totalBound = Optional.of(bound);
+        return this;
+    }
+
+    public CODISConfig setMaximumConflictsCheck(int bound) {
+        this.maximumConflictsCheck = bound;
+        return this;
+    }
+
+    public CODISConfig setMaximumLeafExpansions(int bound) {
+        this.maximumLeafExpansions = Optional.of(bound);
+        return this;
+    }
+
+    public CODISConfig setMaximumInterpolantSize(int size) {
+        this.maximumInterpolantSize = size;
+        return this;
+    }
+
+    public CODISConfig setIterationsBeforeRestart(int iterations) {
+        this.iterationsBeforeRestart = Optional.of(iterations);
+        return this;
+    }
+
+    public CODISConfig setIncrementalImprovement(int improvement) {
+        this.incrementalImprovement = improvement;
         return this;
     }
 

@@ -290,6 +290,7 @@ public class MathSAT implements Solver, InterpolatingSolver {
         int groupA = mathsat.api.msat_create_itp_group(solver);
         int groupB = mathsat.api.msat_create_itp_group(solver);
 
+        //TODO: check if is faster to convert them in a single iterations as conjunction
         mathsat.api.msat_set_itp_group(solver, groupA);
         for (Node leftClause : leftClauses) {
             long expr;
@@ -328,12 +329,8 @@ public class MathSAT implements Solver, InterpolatingSolver {
             int[] groupsOfA = {groupA};
             long interpolant = mathsat.api.msat_get_interpolant(solver, groupsOfA, 1);
             assert (!mathsat.api.MSAT_ERROR_TERM(interpolant));
-            String s = mathsat.api.msat_to_smtlib2_term(solver, interpolant);
-            if (s.length() > 1000) {
-                //logger.warn("too long interpolant: " + s.length());
-                return Either.right(BoolConst.FALSE);
-            }
-//            System.out.println("\nOK, the interpolant is: " + s);
+            //String s = mathsat.api.msat_to_smtlib2_term(solver, interpolant);
+            //System.out.println("\nOK, the interpolant is: " + s);
             return Either.right(convertMathSATToNode(solver, interpolant, marshaller));
         }
 

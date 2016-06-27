@@ -2,6 +2,7 @@ package sg.edu.nus.comp.codis;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
+import com.sun.security.auth.module.LdapLoginModule;
 import fj.data.Either;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -201,6 +202,7 @@ public class CODIS extends SynthesisWithLearning {
      * 3. Prioritize expansions (by number of fixed tests (divide by 2?), by size, etc)
      * 5. Merge choosing steps
      * 6. Should start from an empty program, because leaf program is not always possible
+     * 7. Note that learning algorithm with concise interpolants relies on the fact that all program variables have concrete value in each test
      */
     @Override
     public Either<Pair<Program, Map<Parameter, Constant>>, Node> synthesizeOrLearn(List<? extends TestCase> testSuite,
@@ -211,6 +213,7 @@ public class CODIS extends SynthesisWithLearning {
 
         Set<String> history = new HashSet<>();
 
+        //FIXME: instead of synthesizing, I can just choose an arbitrary leaf component
         TreeBoundedSynthesis initialSynthesizer = new TreeBoundedSynthesis(iSolver, new TBSConfig(1));
         List<TestCase> initialTestSuite = new ArrayList<>();
         initialTestSuite.add(testSuite.get(0));
@@ -240,11 +243,28 @@ public class CODIS extends SynthesisWithLearning {
             tbsConfig.enableInvertedLearning();
         }
 
-        int synthesized = 0;
+        int synthesisIteration = 0;
+        int lastRestart = synthesisIteration;
 
         //TODO: I need to add infrastructure to check correctness and additional properties of conflicts
         while (!synthesisSequence.isEmpty()) {
+            if (config.iterationsBeforeRestart.isPresent() &&
+                    config.iterationsBeforeRestart.get() <= (synthesisIteration - lastRestart)) {
+                logger.info("RESTART");
+                lastRestart = synthesisIteration;
+                while (synthesisSequence.size() > 1) {
+                    synthesisSequence.pop();
+                }
+                continue;
+            }
+
             SearchTreeNode current = synthesisSequence.pop();
+
+            if (config.maximumLeafExpansions.isPresent() &&
+                    config.maximumLeafExpansions.get() < current.explored.size()) {
+                logger.debug("reached maximum number of leaf expansions");
+                continue;
+            }
 
             List<TestCase> newFixed = new ArrayList<>(current.fixed);
             newFixed.add(current.test);
@@ -305,7 +325,13 @@ public class CODIS extends SynthesisWithLearning {
                 Node conflict = result.right().value();
                 //FIXME: why are conflicts true/false sometimes?
                 if (config.conflictLearning && !conflict.equals(BoolConst.FALSE) && !conflict.equals(BoolConst.TRUE)) {
-                    conflicts.insert(remainingWithRemovedLeaf, conflict);
+                    int size = NodeCounter.count(conflict);
+                    logger.debug("Interpolant size: " + size);
+                    if (size > config.maximumInterpolantSize) {
+                        logger.debug("skipping interpolant because of size");
+                    } else {
+                        conflicts.insert(remainingWithRemovedLeaf, conflict);
+                    }
                 }
 
                 if (!current.remainingTests.isEmpty()) {
@@ -320,7 +346,7 @@ public class CODIS extends SynthesisWithLearning {
 //                logger.error("SUBSUMED BUT STILL GENERATED!");
 //            }
 
-            synthesized++;
+            synthesisIteration++;
 
             Pair<Program, Map<Parameter, Constant>> substitution = result.left().value();
 
@@ -348,10 +374,7 @@ public class CODIS extends SynthesisWithLearning {
                     chooseNextLeaf(
                             new SearchTreeNode(next, newComponents, newFixed, newFailing, null, newLeaves, null, newFailing, new ArrayList<Program>()));
 
-            if (synthesized >= 200) {
-                return Either.right(new Dummy(BoolType.TYPE));
-            }
-            logger.info("Iteration: " + synthesized);
+            logger.info("Iteration: " + synthesisIteration);
             logSearchTreeNode(newNode);
 
 //            String repr = newNode.program.getLeft().getSemantics(newNode.program.getRight()).toString();
@@ -368,6 +391,10 @@ public class CODIS extends SynthesisWithLearning {
     }
 
     private boolean isSubsumedAtLeaf(Component leaf, List<SynthesisContext> context, List<Node> conflicts) {
+        if (conflicts.size() > config.maximumConflictsCheck) {
+            conflicts = conflicts.subList(0, config.maximumConflictsCheck);
+        }
+
         List<Node> clauses = new ArrayList<>();
 
         Type leafType = TypeInference.typeOf(leaf);
@@ -404,7 +431,7 @@ public class CODIS extends SynthesisWithLearning {
                 ((MathSAT) solver).disableMemoization();
             }
             if (!result) {
-                //logger.info("SUBSUMED");
+                logger.info("SUBSUMED by " + conflicts.size() + " conflicts");
             }
         }
 

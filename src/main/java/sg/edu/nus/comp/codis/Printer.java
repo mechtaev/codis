@@ -10,7 +10,7 @@ import java.util.*;
  */
 public class Printer {
 
-    // printing with memoization
+    // printing with memoization, but currently uses slow string concatenation
     public static String print(Node node) {
         NodePrinterVisitor visitor = new NodePrinterVisitor();
         node.accept(visitor);
