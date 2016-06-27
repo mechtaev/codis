@@ -19,7 +19,7 @@ public class CODISConfig {
     protected boolean testBacktracking = true;
     protected boolean transformationBacktracking = true;
     protected boolean conciseInterpolants = true;
-    protected boolean checkSubstitutionExists = false;
+    protected boolean checkExpansionSatisfiability = false;
     protected boolean invertedLearning = false;
 
 
@@ -28,8 +28,8 @@ public class CODISConfig {
         return this;
     }
 
-    public CODISConfig checkSubstitutionExists() {
-        this.checkSubstitutionExists = false;
+    public CODISConfig checkExpansionSatisfiability() {
+        this.checkExpansionSatisfiability = true;
         return this;
     }
 

@@ -28,8 +28,8 @@ public class MathSAT implements Solver, InterpolatingSolver {
         if (interpolating) {
             mathsat.api.msat_set_option(this.config, "interpolation", "true");
         }
-        mathsat.api.msat_set_option(this.config, "debug.api_call_trace", "1");
-        mathsat.api.msat_set_option(this.config, "debug.api_call_trace_filename", "trace.smt2");
+//        mathsat.api.msat_set_option(this.config, "debug.api_call_trace", "1");
+//        mathsat.api.msat_set_option(this.config, "debug.api_call_trace_filename", "trace.smt2");
     }
 
     private void initialize() {
@@ -261,7 +261,7 @@ public class MathSAT implements Solver, InterpolatingSolver {
     }
 
     @Override
-    public boolean check(List<Node> clauses) {
+    public boolean isSatisfiable(List<Node> clauses) {
         dispose();
         initialize();
         VariableMarshaller marshaller = new VariableMarshaller();

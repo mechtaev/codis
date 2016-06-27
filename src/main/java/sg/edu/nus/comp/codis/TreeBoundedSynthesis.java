@@ -63,7 +63,7 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
 
     private InterpolatingSolver solver;
 
-    // NOTE: now forbidden check prefixes if they are larger than size
+    // NOTE: now forbidden isSatisfiable prefixes if they are larger than size
     public TreeBoundedSynthesis(InterpolatingSolver solver, TBSConfig config) {
         this.solver = solver;
         this.config = config;

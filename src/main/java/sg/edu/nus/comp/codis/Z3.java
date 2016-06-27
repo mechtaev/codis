@@ -87,7 +87,7 @@ public class Z3 implements Solver, InterpolatingSolver {
                 entries.add("(set-option :produce-models true)");
                 entries.addAll(new HashSet<>(decls.stream().map(Object::toString).collect(Collectors.toList())));
                 entries.addAll(Arrays.asList(solver.getAssertions()).stream().map(c -> "(assert " + c + ")").collect(Collectors.toList()));
-                entries.add("(check-sat)");
+                entries.add("(isSatisfiable-sat)");
                 entries.add("(get-model)");
                 Files.write(logsmt, entries, Charset.forName("UTF-8"));
             } catch (IOException e) {
@@ -163,7 +163,7 @@ public class Z3 implements Solver, InterpolatingSolver {
     }
 
     @Override
-    public boolean check(List<Node> clauses) {
+    public boolean isSatisfiable(List<Node> clauses) {
         return getModel(clauses).isPresent();
     }
 

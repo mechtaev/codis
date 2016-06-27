@@ -45,7 +45,7 @@ public class TestIZ3 {
 
         Either<Map<Variable, Constant>, Node> result = solver.getModelOrInterpolant(left, right);
         assertTrue(result.isRight());
-        //TODO: can check more here
+        //TODO: can isSatisfiable more here
     }
 
     @Test
@@ -63,7 +63,7 @@ public class TestIZ3 {
 
         Either<Map<Variable, Constant>, Node> result = solver.getModelOrInterpolant(left, right);
         assertTrue(result.isRight());
-        //TODO: can check more here
+        //TODO: can isSatisfiable more here
     }
 
 

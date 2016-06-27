@@ -21,6 +21,6 @@ public class Tester {
         Variable result = new ProgramOutput(test.getOutputType());
         List<Node> clauses = test.getConstraints(result);
         clauses.add(new Equal(program.getSemantics(parameterValuation), result));
-        return solver.check(clauses);
+        return solver.isSatisfiable(clauses);
     }
 }

@@ -27,6 +27,8 @@ public class CODIS extends SynthesisWithLearning {
 
     private CODISConfig config;
 
+    private Map<Type, ProgramOutput> conflictVariables;
+
     public CODIS(Solver solver, InterpolatingSolver iSolver, CODISConfig config) {
         this.solver = solver;
         this.config = config;
@@ -205,6 +207,7 @@ public class CODIS extends SynthesisWithLearning {
                                                                                    Multiset<Node> components) {
         ConflictDatabase conflicts = new ConflictDatabase(components);
         Stack<SearchTreeNode> synthesisSequence = new Stack<>();
+        conflictVariables = new HashMap<>();
 
         Set<String> history = new HashSet<>();
 
@@ -237,11 +240,9 @@ public class CODIS extends SynthesisWithLearning {
             tbsConfig.enableInvertedLearning();
         }
 
-        Map<Type, ProgramOutput> conflictVariables = new HashMap<>();
+        int synthesized = 0;
 
-        int synthesized = 1;
-        int subsumed = 1;
-
+        //TODO: I need to add infrastructure to check correctness and additional properties of conflicts
         while (!synthesisSequence.isEmpty()) {
             SearchTreeNode current = synthesisSequence.pop();
 
@@ -270,7 +271,6 @@ public class CODIS extends SynthesisWithLearning {
             tbsConfig.setForbidden(current.explored);
             TreeBoundedSynthesis synthesizer = new TreeBoundedSynthesis(iSolver, tbsConfig);
 
-            Type leafType = TypeInference.typeOf(current.leaf);
 
             boolean isSubsumed = false;
 
@@ -278,48 +278,9 @@ public class CODIS extends SynthesisWithLearning {
                 List<Node> relevantConflicts = conflicts.query(remainingWithRemovedLeaf);
                 if (!relevantConflicts.isEmpty()) {
 
-                    List<Node> clauses = new ArrayList<>();
+                    isSubsumed = isSubsumedAtLeaf(current.leaf, contextTestSuite, relevantConflicts);
 
-                    for (SynthesisContext testCase : contextTestSuite) {
-                        ProgramOutput output = conflictVariables.get(leafType);
-                        List<Node> testClauses = testCase.getConstraints(output);
-                        for (Node testClause : testClauses) {
-                            clauses.add(testClause.instantiate(testCase.getOuterTest()));
-                        }
-                    }
-
-                    boolean result;
-                    if (config.checkSubstitutionExists) {
-                        result = solver.check(clauses);
-                    } else {
-                        result = true;
-                    }
-                    if (result) {
-
-                        Node conflict;
-                        if (config.invertedLearning) {
-                            conflict = Node.conjunction(relevantConflicts);
-                        } else {
-                            conflict = new Not(Node.disjunction(relevantConflicts));
-                        }
-                        clauses.add(conflict);
-
-                        if (solver instanceof MathSAT) {
-                            ((MathSAT) solver).enableMemoization();
-                        }
-                        result = solver.check(clauses);
-                        if (solver instanceof MathSAT) {
-                            ((MathSAT) solver).disableMemoization();
-                        }
-                        if (!result) {
-                            subsumed++;
-                            //temporary:
-                            isSubsumed = true;
-                            result = true;
-                            //logger.info("SUBSUMED");
-                        }
-                    }
-                    if (!result) {
+                    if (isSubsumed) {
                         if (!current.remainingTests.isEmpty()) {
                             synthesisSequence.push(chooseNextTest(current));
                         } else if (!current.remainingLeaves.isEmpty()) {
@@ -330,6 +291,7 @@ public class CODIS extends SynthesisWithLearning {
                 }
             }
 
+            Type leafType = TypeInference.typeOf(current.leaf);
             if (!conflictVariables.containsKey(leafType)) {
                 ProgramOutput output = new ProgramOutput(leafType);
                 conflictVariables.put(leafType, output);
@@ -341,16 +303,8 @@ public class CODIS extends SynthesisWithLearning {
 
             if (result.isRight()) {
                 Node conflict = result.right().value();
-                //FIXME: why do we get true and false?
-                //if (conflict.equals(BoolConst.FALSE)) logger.warn("FALSE");
-                //if (conflict.equals(BoolConst.TRUE)) logger.warn("TRUE");
+                //FIXME: why are conflicts true/false sometimes?
                 if (config.conflictLearning && !conflict.equals(BoolConst.FALSE) && !conflict.equals(BoolConst.TRUE)) {
-//                    String print = Printer.print(conflict);
-//                    if (print.length() > 1000) {
-//                        print = "<too long>";
-//                    }
-//                    logger.info("learned conflict: " + print);
-//                    logger.info("for components: " + remainingWithRemovedLeaf);
                     conflicts.insert(remainingWithRemovedLeaf, conflict);
                 }
 
@@ -362,9 +316,9 @@ public class CODIS extends SynthesisWithLearning {
                 continue;
             }
 
-            if (isSubsumed) {
-                logger.error("WE HAVE SERIOUS PROBLEMS");
-            }
+//            if (isSubsumed) {
+//                logger.error("SUBSUMED BUT STILL GENERATED!");
+//            }
 
             synthesized++;
 
@@ -383,8 +337,6 @@ public class CODIS extends SynthesisWithLearning {
 
             List<TestCase> newFailing = getFailing(next, testSuite);
             if (newFailing.isEmpty()) {
-                logger.info("Total synthesized: " + synthesized);
-                logger.info("Total subsumed: " + subsumed);
                 return Either.left(next);
             }
 
@@ -396,19 +348,67 @@ public class CODIS extends SynthesisWithLearning {
                     chooseNextLeaf(
                             new SearchTreeNode(next, newComponents, newFixed, newFailing, null, newLeaves, null, newFailing, new ArrayList<Program>()));
 
+            if (synthesized >= 200) {
+                return Either.right(new Dummy(BoolType.TYPE));
+            }
+            logger.info("Iteration: " + synthesized);
             logSearchTreeNode(newNode);
 
-            String repr = newNode.program.getLeft().getSemantics(newNode.program.getRight()).toString();
-            if (history.contains(repr)) {
-                //logger.warn("REPETITION");
-            } else {
-                history.add(repr);
-            }
+//            String repr = newNode.program.getLeft().getSemantics(newNode.program.getRight()).toString();
+//            if (history.contains(repr)) {
+//                //logger.warn("REPETITION");
+//            } else {
+//                history.add(repr);
+//            }
 
             synthesisSequence.push(newNode);
         }
 
         return Either.right(new Dummy(BoolType.TYPE));
+    }
+
+    private boolean isSubsumedAtLeaf(Component leaf, List<SynthesisContext> context, List<Node> conflicts) {
+        List<Node> clauses = new ArrayList<>();
+
+        Type leafType = TypeInference.typeOf(leaf);
+
+        for (SynthesisContext testCase : context) {
+            ProgramOutput output = conflictVariables.get(leafType);
+            List<Node> testClauses = testCase.getConstraints(output);
+            for (Node testClause : testClauses) {
+                clauses.add(testClause.instantiate(testCase.getOuterTest()));
+            }
+        }
+
+        boolean result;
+        if (config.checkExpansionSatisfiability) {
+            result = solver.isSatisfiable(clauses);
+        } else {
+            result = true;
+        }
+
+        if (result) {
+            Node conflict;
+            if (config.invertedLearning) {
+                conflict = Node.conjunction(conflicts);
+            } else {
+                conflict = new Not(Node.disjunction(conflicts));
+            }
+            clauses.add(conflict);
+
+            if (solver instanceof MathSAT) {
+                ((MathSAT) solver).enableMemoization();
+            }
+            result = solver.isSatisfiable(clauses);
+            if (solver instanceof MathSAT) {
+                ((MathSAT) solver).disableMemoization();
+            }
+            if (!result) {
+                //logger.info("SUBSUMED");
+            }
+        }
+
+        return !result;
     }
 
 }
