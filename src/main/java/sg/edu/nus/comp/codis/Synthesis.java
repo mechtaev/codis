@@ -14,5 +14,6 @@ import java.util.Optional;
 public interface Synthesis {
 
     Optional<Pair<Program, Map<Parameter, Constant>>> synthesize(List<? extends TestCase> testSuite, Multiset<Node> components);
+    List<Pair<Program, Map<Parameter, Constant>>> synthesizeAll(List<? extends TestCase> testSuite, Multiset<Node> components);
 
 }

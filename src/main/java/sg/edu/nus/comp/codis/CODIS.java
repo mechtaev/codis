@@ -51,6 +51,7 @@ public class CODIS extends SynthesisWithLearning {
         }
     }
 
+
     private class SearchTreeNode {
         private Pair<Program, Map<Parameter, Constant>> program;
         private Multiset<Node> remainingComponents;
@@ -209,9 +210,34 @@ public class CODIS extends SynthesisWithLearning {
     @Override
     public Either<Pair<Program, Map<Parameter, Constant>>, Node> synthesizeOrLearn(List<? extends TestCase> testSuite,
                                                                                    Multiset<Node> components) {
+        Either<List<Pair<Program, Map<Parameter, Constant>>>, Node> result = synthesizeAux(testSuite, components, false);
+        if (result.isRight()) {
+            return Either.right(result.right().value());
+        } else {
+            return Either.left(result.left().value().get(0));
+        }
+    }
+
+    @Override
+    public List<Pair<Program, Map<Parameter, Constant>>> synthesizeAll(List<? extends TestCase> testSuite, Multiset<Node> components) {
+        Either<List<Pair<Program, Map<Parameter, Constant>>>, Node> result = synthesizeAux(testSuite, components, true);
+        if (result.isRight()) {
+            return new ArrayList<>();
+        } else {
+            return result.left().value();
+        }
+
+    }
+
+    public Either<List<Pair<Program, Map<Parameter, Constant>>>, Node> synthesizeAux(List<? extends TestCase> testSuite,
+                                                                                     Multiset<Node> components,
+                                                                                     boolean findAll) {
+
         ConflictDatabase conflicts = new ConflictDatabase(components);
         Stack<SearchTreeNode> synthesisSequence = new Stack<>();
         conflictVariables = new HashMap<>();
+
+        List<Pair<Program, Map<Parameter, Constant>>> found = new ArrayList<>();
 
         Set<String> history = new HashSet<>();
 
@@ -227,7 +253,8 @@ public class CODIS extends SynthesisWithLearning {
         List<TestCase> failing = getFailing(initial, testSuite);
 
         if (failing.isEmpty()) {
-            return Either.left(initial);
+            found.add(initial);
+            return Either.left(found); //don't need to check findAll since not expansions from here
         }
 
         Multiset<Node> remaining = remainingComponents(components, initial.getLeft());
@@ -295,7 +322,6 @@ public class CODIS extends SynthesisWithLearning {
 
             tbsConfig.setForbidden(current.explored);
             TreeBoundedSynthesis synthesizer = new TreeBoundedSynthesis(iSolver, tbsConfig);
-
 
             boolean isSubsumed = false;
 
@@ -368,7 +394,13 @@ public class CODIS extends SynthesisWithLearning {
 
             List<TestCase> newFailing = getFailing(next, testSuite);
             if (newFailing.isEmpty()) {
-                return Either.left(next);
+                found.add(next);
+                if (!findAll) {
+                    return Either.left(found);
+                } else {
+                    logger.info("FOUND: " + next.getLeft().getSemantics(next.getRight()));
+                    continue;
+                }
             }
 
             Multiset<Node> newComponents = remainingComponents(components, newProgram);
@@ -391,7 +423,11 @@ public class CODIS extends SynthesisWithLearning {
             synthesisSequence.push(newNode);
         }
 
-        return Either.right(new Dummy(BoolType.TYPE));
+        if (found.isEmpty()) {
+            return Either.right(new Dummy(BoolType.TYPE));
+        } else {
+            return Either.left(found);
+        }
     }
 
     private boolean isSubsumedAtLeaf(Component leaf, List<SynthesisContext> context, List<Node> conflicts) {

@@ -21,4 +21,9 @@ public class TestDrivenSynthesis implements Synthesis {
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    public List<Pair<Program, Map<Parameter, Constant>>> synthesizeAll(List<? extends TestCase> testSuite, Multiset<Node> components) {
+        throw new UnsupportedOperationException();
+    }
+
 }

@@ -51,6 +51,12 @@ public class ComponentBasedSynthesis implements Synthesis {
         }
     }
 
+    @Override
+    public List<Pair<Program, Map<Parameter, Constant>>> synthesizeAll(List<? extends TestCase> testSuite, Multiset<Node> components) {
+        // Don't know how to synthesize all with this encoding
+        throw new UnsupportedOperationException();
+    }
+
     /**
      * Allocating components on an interval
      *

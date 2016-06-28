@@ -75,4 +75,10 @@ public class CEGIS implements Synthesis {
 
         return result;
     }
+
+    @Override
+    public List<Pair<Program, Map<Parameter, Constant>>> synthesizeAll(List<? extends TestCase> testSuite, Multiset<Node> components) {
+        //NOTE: this may not be possible
+        throw new UnsupportedOperationException();
+    }
 }

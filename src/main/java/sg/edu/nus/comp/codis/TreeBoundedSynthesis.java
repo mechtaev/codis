@@ -22,6 +22,12 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
 
     private Logger logger = LoggerFactory.getLogger(TreeBoundedSynthesis.class);
 
+    @Override
+    public List<Pair<Program, Map<Parameter, Constant>>> synthesizeAll(List<? extends TestCase> testSuite, Multiset<Node> components) {
+        //TODO: this should work by disallowing previous transformations
+        throw new UnsupportedOperationException();
+    }
+
     private class EncodingResult {
         // branch values tree
         private Map<Variable, List<Variable>> tree;
@@ -251,6 +257,7 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
                     subnodeForbidden.put(child, new HashMap<>());
                     for (Program local : localForbidden) {
                         if (local.getRoot().getSemantics().equals(component.getSemantics())) {
+                            //FIXME: this option currently forbid prefixes, which is not desirable
                             if (config.matchLeaves ||
                                     local.getChildren().values().stream().filter(p -> !p.isLeaf()).count() > 0) {
                                 for (Program global : forbidden.keySet()) {
