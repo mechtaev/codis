@@ -24,6 +24,7 @@ public class CODISConfig {
     protected Optional<Integer> maximumLeafExpansions = Optional.empty();
     protected int maximumInterpolantSize = 100;
     protected int maximumConflictsCheck = 20;
+    protected boolean debugMode = false;
 
     // Unsupported options:
     protected boolean testBacktracking = true;
@@ -96,5 +97,9 @@ public class CODISConfig {
         return this;
     }
 
+    public CODISConfig enableDebugMode() {
+        this.debugMode = true;
+        return this;
+    }
 
 }

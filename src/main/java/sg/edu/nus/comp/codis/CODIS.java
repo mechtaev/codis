@@ -278,7 +278,6 @@ public class CODIS extends SynthesisWithLearning {
         int synthesisIteration = 0;
         int lastRestart = synthesisIteration;
 
-        //TODO: I need to add infrastructure to check correctness and additional properties of conflicts
         while (!synthesisSequence.isEmpty()) {
             if (config.iterationsBeforeRestart.isPresent() &&
                     config.iterationsBeforeRestart.get() <= (synthesisIteration - lastRestart)) {
@@ -323,25 +322,6 @@ public class CODIS extends SynthesisWithLearning {
             tbsConfig.setForbidden(current.explored);
             TreeBoundedSynthesis synthesizer = new TreeBoundedSynthesis(iSolver, tbsConfig);
 
-            boolean isSubsumed = false;
-
-            if (config.conflictLearning && !restricted) {
-                List<Node> relevantConflicts = conflicts.query(remainingWithRemovedLeaf);
-                if (!relevantConflicts.isEmpty()) {
-
-                    isSubsumed = isSubsumedAtLeaf(current.leaf, contextTestSuite, relevantConflicts);
-
-                    if (isSubsumed) {
-                        if (!current.remainingTests.isEmpty()) {
-                            synthesisSequence.push(chooseNextTest(current));
-                        } else if (!current.remainingLeaves.isEmpty()) {
-                            synthesisSequence.push(chooseNextLeaf(current));
-                        }
-                        continue;
-                    }
-                }
-            }
-
             Type leafType = TypeInference.typeOf(current.leaf);
             if (!conflictVariables.containsKey(leafType)) {
                 ProgramOutput output = new ProgramOutput(leafType);
@@ -349,11 +329,44 @@ public class CODIS extends SynthesisWithLearning {
                 tbsConfig.setProgramOutput(leafType, output);
             }
 
+            boolean isSubsumed = false;
+            boolean substitutionExists = true; //NOTE: true actually means don't know
+
+            if (config.checkExpansionSatisfiability && current.explored.isEmpty()) {
+                substitutionExists = substitutionExists(current.leaf, contextTestSuite);
+            }
+
+            //FIXME: restricted is a bad solution. Should limit the depth for which we perform expansions
+            if (config.conflictLearning && !restricted && substitutionExists && current.explored.isEmpty()) {
+                List<Node> relevantConflicts = conflicts.query(remainingWithRemovedLeaf);
+                if (!relevantConflicts.isEmpty()) {
+                    isSubsumed = isSubsumedAtLeaf(current.leaf, contextTestSuite, relevantConflicts);
+                }
+            }
+
+            if ((!substitutionExists || isSubsumed) && !config.debugMode) {
+                if (!current.remainingTests.isEmpty()) {
+                    synthesisSequence.push(chooseNextTest(current));
+                } else if (!current.remainingLeaves.isEmpty()) {
+                    synthesisSequence.push(chooseNextLeaf(current));
+                }
+                continue;
+            }
+
             Either<Pair<Program, Map<Parameter, Constant>>, Node> result =
                     synthesizer.synthesizeOrLearn(contextTestSuite, remainingWithRemovedLeaf);
 
             if (result.isRight()) {
                 Node conflict = result.right().value();
+                if (conflict.equals(BoolConst.FALSE)) {
+                    logger.debug("conflict is false");
+                }
+                if (conflict.equals(BoolConst.TRUE)) {
+                    logger.debug("conflict is true");
+                }
+                if (config.debugMode && substitutionExists && isSubsumed) {
+                    logger.info("Correct subsumption");
+                }
                 //FIXME: why are conflicts true/false sometimes?
                 if (config.conflictLearning && !conflict.equals(BoolConst.FALSE) && !conflict.equals(BoolConst.TRUE)) {
                     int size = NodeCounter.count(conflict);
@@ -373,9 +386,9 @@ public class CODIS extends SynthesisWithLearning {
                 continue;
             }
 
-//            if (isSubsumed) {
-//                logger.error("SUBSUMED BUT STILL GENERATED!");
-//            }
+            if (config.debugMode && isSubsumed) {
+                logger.error("INVALID SUBSUMPTION!");
+            }
 
             synthesisIteration++;
 
@@ -432,6 +445,7 @@ public class CODIS extends SynthesisWithLearning {
 
     private boolean isSubsumedAtLeaf(Component leaf, List<SynthesisContext> context, List<Node> conflicts) {
         if (conflicts.size() > config.maximumConflictsCheck) {
+            logger.debug("found " + conflicts.size() + " conflicts, but only " + config.maximumConflictsCheck + " used");
             conflicts = conflicts.subList(0, config.maximumConflictsCheck);
         }
 
@@ -447,35 +461,43 @@ public class CODIS extends SynthesisWithLearning {
             }
         }
 
-        boolean result;
-        if (config.checkExpansionSatisfiability) {
-            result = solver.isSatisfiable(clauses);
+        Node conflict;
+        if (config.invertedLearning) {
+            conflict = Node.conjunction(conflicts);
         } else {
-            result = true;
+            conflict = new Not(Node.disjunction(conflicts));
+        }
+        clauses.add(conflict);
+
+        if (solver instanceof MathSAT) {
+            ((MathSAT) solver).enableMemoization();
+        }
+        boolean intersected = solver.isSatisfiable(clauses);
+        if (solver instanceof MathSAT) {
+            ((MathSAT) solver).disableMemoization();
+        }
+        if (!intersected) {
+            logger.debug("SUBSUMED by " + conflicts.size() + " conflicts");
         }
 
-        if (result) {
-            Node conflict;
-            if (config.invertedLearning) {
-                conflict = Node.conjunction(conflicts);
-            } else {
-                conflict = new Not(Node.disjunction(conflicts));
-            }
-            clauses.add(conflict);
+        return !intersected;
+    }
 
-            if (solver instanceof MathSAT) {
-                ((MathSAT) solver).enableMemoization();
-            }
-            result = solver.isSatisfiable(clauses);
-            if (solver instanceof MathSAT) {
-                ((MathSAT) solver).disableMemoization();
-            }
-            if (!result) {
-                logger.debug("SUBSUMED by " + conflicts.size() + " conflicts");
+    private boolean substitutionExists(Component leaf, List<SynthesisContext> context) {
+        List<Node> clauses = new ArrayList<>();
+
+        Type leafType = TypeInference.typeOf(leaf);
+
+        for (SynthesisContext testCase : context) {
+            ProgramOutput output = conflictVariables.get(leafType);
+            List<Node> testClauses = testCase.getConstraints(output);
+            for (Node testClause : testClauses) {
+                clauses.add(testClause.instantiate(testCase.getOuterTest()));
             }
         }
 
-        return !result;
+        return solver.isSatisfiable(clauses);
+
     }
 
 }
