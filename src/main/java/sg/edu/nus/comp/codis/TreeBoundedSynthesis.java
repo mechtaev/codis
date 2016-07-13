@@ -36,13 +36,13 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
         private Map<Variable, List<Selector>> nodeChoices;
 
         // selected components
-        private Map<Selector, Component> selectedComponent;
+        private Map<Selector, Node> selectedComponent;
 
         // branch is activated by any of these selectors
         private Map<Variable, List<Selector>> branchDependencies;
 
         // selectors corresponding to the same component
-        private Map<Component, List<Selector>> componentUsage;
+        private Map<Node, List<Selector>> componentUsage;
 
         // from forbidden program to corresponding selectors
         // list of lists because at each node there can be several matches that must be disjoined
@@ -52,9 +52,9 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
 
         public EncodingResult(Map<Variable, List<Variable>> tree,
                               Map<Variable, List<Selector>> nodeChoices,
-                              Map<Selector, Component> selectedComponent,
+                              Map<Selector, Node> selectedComponent,
                               Map<Variable, List<Selector>> branchDependencies,
-                              Map<Component, List<Selector>> componentUsage,
+                              Map<Node, List<Selector>> componentUsage,
                               Map<Program, List<List<Selector>>> forbiddenSelectors,
                               List<Node> clauses) {
             this.tree = tree;
@@ -78,7 +78,8 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
     @Override
     public Either<Pair<Program, Map<Parameter, Constant>>, Node> synthesizeOrLearn(List<? extends TestCase> testSuite,
                                                                                    Multiset<Node> components) {
-        List<Component> flattenedComponents = components.stream().map(Component::new).collect(Collectors.toList());
+        //List<Component> flattenedComponents = components.stream().map(Component::new).collect(Collectors.toList());
+        List<Node> uniqueComponents = new ArrayList<>(components.elementSet());
         ProgramOutput root;
         if (config.outputs.containsKey(testSuite.get(0).getOutputType())) {
             root = config.outputs.get(testSuite.get(0).getOutputType());
@@ -89,7 +90,7 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
         Map<Program, Program> initialForbidden =
                 config.forbidden.stream().collect(Collectors.toMap(Function.identity(), Function.identity()));
 
-        Optional<EncodingResult> result = encodeBranch(root, config.bound, flattenedComponents, initialForbidden);
+        Optional<EncodingResult> result = encodeBranch(root, config.bound, uniqueComponents, initialForbidden);
 
         if (!result.isPresent()) {
             throw new IllegalArgumentException("wrong synthesis input");
@@ -127,9 +128,10 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
             }
         }
         if (config.uniqueUsage) {
-            for (Component component : flattenedComponents) {
+            for (Node component : uniqueComponents) {
                 if (result.get().componentUsage.containsKey(component)) {
-                    synthesisClauses.addAll(Cardinality.Pairwise.atMostOne(result.get().componentUsage.get(component)));
+                    synthesisClauses.addAll(Cardinality.SortingNetwork.atMostK(components.count(component),
+                            result.get().componentUsage.get(component)));
                 }
             }
         }
@@ -181,21 +183,21 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
         return clauses;
     }
 
-    private Optional<EncodingResult> encodeBranch(Variable output, int size, List<Component> components, Map<Program, Program> forbidden) {
+    private Optional<EncodingResult> encodeBranch(Variable output, int size, List<Node> components, Map<Program, Program> forbidden) {
         // Local results:
         List<Selector> currentChoices = new ArrayList<>();
-        Map<Selector, Component> selectedComponent = new HashMap<>();
+        Map<Selector, Node> selectedComponent = new HashMap<>();
         Map<Variable, List<Selector>> branchDependencies = new HashMap<>();
-        Map<Component, List<Selector>> componentUsage = new HashMap<>();
+        Map<Node, List<Selector>> componentUsage = new HashMap<>();
 
         List<Node> clauses = new ArrayList<>();
 
-        List<Component> relevantComponents = new ArrayList<>(components);
+        List<Node> relevantComponents = new ArrayList<>(components);
         relevantComponents.removeIf(c -> !TypeInference.typeOf(c).equals(output.getType()));
-        List<Component> leafComponents = new ArrayList<>(relevantComponents);
-        leafComponents.removeIf(c -> !(c.isLeaf()));
-        List<Component> functionComponents = new ArrayList<>(relevantComponents);
-        functionComponents.removeIf(Component::isLeaf);
+        List<Node> leafComponents = new ArrayList<>(relevantComponents);
+        leafComponents.removeIf(c -> !Traverse.collectByType(c, Hole.class).isEmpty());
+        List<Node> functionComponents = new ArrayList<>(relevantComponents);
+        functionComponents.removeIf(c -> Traverse.collectByType(c, Hole.class).isEmpty());
 
         Set<Program> localForbidden = new HashSet<>(forbidden.values());
         // mapping from current level to selectors
@@ -206,17 +208,17 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
         Map<Program, List<Selector>> localForbiddenLeavesSelectors = new HashMap<>();
         Map<Program, List<List<Selector>>> globalForbiddenResult = new HashMap<>();
 
-        for (Component component : leafComponents) {
+        for (Node component : leafComponents) {
             Selector selector = new Selector();
             for (Program program : localForbidden) {
-                if (program.getRoot().getSemantics().equals(component.getSemantics())) {
+                if (program.getRoot().getSemantics().equals(component)) {
                     if (!localForbiddenLeavesSelectors.containsKey(program)) {
                         localForbiddenLeavesSelectors.put(program, new ArrayList<>());
                     }
                     localForbiddenLeavesSelectors.get(program).add(selector);
                 }
             }
-            clauses.add(new Impl(selector, new Equal(output, component.getSemantics())));
+            clauses.add(new Impl(selector, new Equal(output, component)));
             if (!componentUsage.containsKey(component)) {
                 componentUsage.put(component, new ArrayList<>());
             }
@@ -229,19 +231,19 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
         // from child branch to its encoding:
         Map<Variable, EncodingResult> subresults = new HashMap<>();
 
-        List<Component> feasibleComponents = new ArrayList<>(functionComponents);
+        List<Node> feasibleComponents = new ArrayList<>(functionComponents);
 
         if (size > 1) {
-            Map<Component, Map<Hole, Variable>> branchMatching = new HashMap<>();
+            Map<Node, Map<Hole, Variable>> branchMatching = new HashMap<>();
             // components dependent of the branch:
-            Map<Variable, List<Component>> componentDependencies = new HashMap<>();
+            Map<Variable, List<Node>> componentDependencies = new HashMap<>();
             // forbidden for each branch:
             Map<Variable, Map<Program, Program>> subnodeForbidden = new HashMap<>();
             // first we need to precompute all required branches and match them with subnodes of forbidden programs:
-            for (Component component : functionComponents) {
+            for (Node component : functionComponents) {
                 Map<Hole, Variable> args = new HashMap<>();
                 List<Variable> availableChildren = new ArrayList<>(children);
-                for (Hole input : component.getInputs()) {
+                for (Hole input : Traverse.collectByType(component, Hole.class)) {
                     Variable child;
                     Optional<Variable> existingChild = availableChildren.stream().filter(o -> o.getType().equals(input.getType())).findFirst();
                     if (existingChild.isPresent()) {
@@ -256,7 +258,7 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
 
                     subnodeForbidden.put(child, new HashMap<>());
                     for (Program local : localForbidden) {
-                        if (local.getRoot().getSemantics().equals(component.getSemantics())) {
+                        if (local.getRoot().getSemantics().equals(component)) {
                             //FIXME: this option currently forbid prefixes, which is not desirable
                             if (config.matchLeaves ||
                                     local.getChildren().values().stream().filter(p -> !p.isLeaf()).count() > 0) {
@@ -294,7 +296,7 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
             children.removeAll(infeasibleChildren);
 
             // for all encoded components, creating node constraints:
-            for (Component component : feasibleComponents) {
+            for (Node component : feasibleComponents) {
                 Selector selector = new Selector();
                 Collection<Variable> usedBranches = branchMatching.get(component).values();
                 for (Variable child : usedBranches) {
@@ -304,11 +306,11 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
                     branchDependencies.get(child).add(selector);
                 }
                 for (Program program : localForbidden) {
-                    if (program.getRoot().getSemantics().equals(component.getSemantics())) {
+                    if (program.getRoot().getSemantics().equals(component)) {
                         localForbiddenSelectors.get(program).add(selector);
                     }
                 }
-                clauses.add(new Impl(selector, new Equal(output, Traverse.substitute(component.getSemantics(), branchMatching.get(component)))));
+                clauses.add(new Impl(selector, new Equal(output, Traverse.substitute(component, branchMatching.get(component)))));
                 if (!componentUsage.containsKey(component)) {
                     componentUsage.put(component, new ArrayList<>());
                 }
@@ -332,7 +334,7 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
         // merging subnodes information:
         for (EncodingResult subresult: subresults.values()) {
             clauses.addAll(subresult.clauses);
-            for (Map.Entry<Component, List<Selector>> usage : subresult.componentUsage.entrySet()) {
+            for (Map.Entry<Node, List<Selector>> usage : subresult.componentUsage.entrySet()) {
                 if (componentUsage.containsKey(usage.getKey())) {
                     componentUsage.get(usage.getKey()).addAll(usage.getValue());
                 } else {
@@ -384,20 +386,20 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
                                                            EncodingResult result) {
         List<Selector> nodeChoices = result.nodeChoices.get(root);
         Selector choice = nodeChoices.stream().filter(s -> assignment.get(s).equals(BoolConst.TRUE)).findFirst().get();
-        Component component = result.selectedComponent.get(choice);
+        Node component = result.selectedComponent.get(choice);
         Map<Parameter, Constant> parameterValuation = new HashMap<>();
-        if (component.getSemantics() instanceof Parameter) {
-            Parameter p = (Parameter) component.getSemantics();
+        if (component instanceof Parameter) {
+            Parameter p = (Parameter) component;
             parameterValuation.put(p, assignment.get(p));
         }
 
-        if (component.isLeaf()) {
-            return new ImmutablePair<>(Program.leaf(component), parameterValuation);
+        if (Traverse.collectByType(component, Hole.class).isEmpty()) {
+            return new ImmutablePair<>(Program.leaf(new Component(component)), parameterValuation);
         }
 
         Map<Hole, Program> args = new HashMap<>();
         List<Variable> children = new ArrayList<>(result.tree.get(root));
-        for (Hole input : component.getInputs()) {
+        for (Hole input : Traverse.collectByType(component, Hole.class)) {
             Variable child = children.stream().filter(o -> o.getType().equals(input.getType())).findFirst().get();
             children.remove(child);
             Pair<Program, Map<Parameter, Constant>> subresult = decode(assignment, child, result);
@@ -405,7 +407,7 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
             args.put(input, subresult.getLeft());
         }
 
-        return new ImmutablePair<>(Program.app(component, args), parameterValuation);
+        return new ImmutablePair<>(Program.app(new Component(component), args), parameterValuation);
     }
 
 }
