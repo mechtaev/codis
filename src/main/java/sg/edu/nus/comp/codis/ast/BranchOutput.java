@@ -1,5 +1,8 @@
 package sg.edu.nus.comp.codis.ast;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+
 /**
  * Created by Sergey Mechtaev on 2/5/2016.
  *
@@ -44,7 +47,28 @@ public class BranchOutput extends Variable {
     }
 
     private static int classCounter = 0;
-    private int objectCounter;
+    private final int objectCounter;
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof BranchOutput))
+            return false;
+        if (obj == this)
+            return true;
+
+        BranchOutput rhs = (BranchOutput) obj;
+        return new EqualsBuilder().
+                append(objectCounter, rhs.objectCounter).
+                isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 31).
+                append(objectCounter).
+                toHashCode();
+    }
+
 
     @Override
     public String toString() {

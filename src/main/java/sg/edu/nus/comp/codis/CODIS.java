@@ -130,6 +130,7 @@ public class CODIS extends SynthesisWithLearning {
         private Component leaf;
 
         SynthesisContext(TestCase outerTest, Pair<Program, Map<Parameter, Constant>> context, Component leaf) {
+            super();
             this.outerTest = outerTest;
             this.context = context;
             this.leaf = leaf;

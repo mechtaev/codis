@@ -1,5 +1,8 @@
 package sg.edu.nus.comp.codis.ast;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+
 /**
  * Variable used for CODIS, conflict learning, evaluation. Test-instantiated. Physical equality.
  */
@@ -18,6 +21,8 @@ public class ProgramOutput extends Variable {
 
     public ProgramOutput(Type type) {
         this.type = type;
+        this.objectCounter = classCounter;
+        classCounter++;
     }
 
     @Override
@@ -39,10 +44,33 @@ public class ProgramOutput extends Variable {
         }
     }
 
+    private static int classCounter = 0;
+    private final int objectCounter;
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof ProgramOutput))
+            return false;
+        if (obj == this)
+            return true;
+
+        ProgramOutput rhs = (ProgramOutput) obj;
+        return new EqualsBuilder().
+                append(objectCounter, rhs.objectCounter).
+                isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 31).
+                append(objectCounter).
+                toHashCode();
+    }
+
 
     @Override
     public String toString() {
-        return "Output";
+        return "Output" + objectCounter;
     }
 
 }

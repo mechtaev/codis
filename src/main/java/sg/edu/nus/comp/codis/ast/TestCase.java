@@ -1,5 +1,7 @@
 package sg.edu.nus.comp.codis.ast;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import sg.edu.nus.comp.codis.ast.theory.Equal;
 
 import java.util.ArrayList;
@@ -16,6 +18,11 @@ public abstract class TestCase {
     public abstract List<Node> getConstraints(Variable output);
 
     public abstract Type getOutputType();
+
+    protected TestCase() {
+        objectCounter = classCounter;
+        classCounter++;
+    }
 
     public static TestCase ofAssignment(Map<ProgramVariable, ? extends Node> assignment, Node outputValue) {
         ArrayList<Node> inputClauses = new ArrayList<>();
@@ -44,6 +51,30 @@ public abstract class TestCase {
     public void setId(String id) {
         this.id = id;
     }
+
+    private static int classCounter = 0;
+    private final int objectCounter;
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof TestCase))
+            return false;
+        if (obj == this)
+            return true;
+
+        TestCase rhs = (TestCase) obj;
+        return new EqualsBuilder().
+                append(objectCounter, rhs.objectCounter).
+                isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 31).
+                append(objectCounter).
+                toHashCode();
+    }
+
 
     @Override
     public String toString() {

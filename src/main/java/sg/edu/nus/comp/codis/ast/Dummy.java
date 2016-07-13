@@ -1,5 +1,8 @@
 package sg.edu.nus.comp.codis.ast;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+
 /**
  * Variable value of which we don't care about. Implements physical equality. Test instantiated
  */
@@ -17,6 +20,8 @@ public class Dummy extends Variable {
 
     public Dummy(Type type) {
         this.type = type;
+        this.objectCounter = classCounter;
+        classCounter++;
     }
 
     @Override
@@ -38,9 +43,33 @@ public class Dummy extends Variable {
         }
     }
 
+    private static int classCounter = 0;
+    private final int objectCounter;
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof Dummy))
+            return false;
+        if (obj == this)
+            return true;
+
+        Dummy rhs = (Dummy) obj;
+        return new EqualsBuilder().
+                append(objectCounter, rhs.objectCounter).
+                isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 31).
+                append(objectCounter).
+                toHashCode();
+    }
+
+
     @Override
     public String toString() {
-        return "Dummy";
+        return "Dummy" + objectCounter;
     }
 
 }

@@ -1,5 +1,7 @@
 package sg.edu.nus.comp.codis.ast;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import sg.edu.nus.comp.codis.ast.BottomUpVisitor;
 import sg.edu.nus.comp.codis.ast.TopDownVisitor;
 import sg.edu.nus.comp.codis.ast.Variable;
@@ -23,12 +25,34 @@ public class Selector extends Variable {
     }
 
     private static int classCounter = 0;
-    private int objectCounter;
+    private final int objectCounter;
 
     public Selector() {
         objectCounter = classCounter;
         classCounter++;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof Selector))
+            return false;
+        if (obj == this)
+            return true;
+
+        Selector rhs = (Selector) obj;
+        return new EqualsBuilder().
+                append(objectCounter, rhs.objectCounter).
+                isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 31).
+                append(objectCounter).
+                toHashCode();
+    }
+
+
 
     @Override
     public String toString() {
