@@ -129,7 +129,7 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
         if (config.uniqueUsage) {
             for (Component component : flattenedComponents) {
                 if (result.get().componentUsage.containsKey(component)) {
-                    synthesisClauses.addAll(Cardinality.pairwise(result.get().componentUsage.get(component)));
+                    synthesisClauses.addAll(Cardinality.Pairwise.atMostOne(result.get().componentUsage.get(component)));
                 }
             }
         }
