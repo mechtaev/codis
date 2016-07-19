@@ -274,9 +274,10 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
                         }
                     }
                 }
-                for (Variable variable : args.values()) {
-                    if (!children.contains(variable)) {
-                        children.add(variable);
+                //NOTE: we need to preserve order for decoding
+                for (Hole input : Traverse.collectByType(component, Hole.class)) {
+                    if (!children.contains(args.get(input))) {
+                        children.add(args.get(input));
                     }
                 }
                 branchMatching.put(component, args);
