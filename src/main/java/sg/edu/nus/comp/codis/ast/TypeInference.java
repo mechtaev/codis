@@ -13,11 +13,6 @@ import java.util.Stack;
 public class TypeInference {
 
     public static Type typeOf(Node node) {
-        if (node instanceof Equal) {
-            Node left = ((BinaryOp) node).getLeft();
-            return typeOf(left);
-        }
-
         if (node instanceof Add ||
                 node instanceof Sub ||
                 node instanceof Mult ||
@@ -31,6 +26,7 @@ public class TypeInference {
                 node instanceof Or ||
                 node instanceof Iff ||
                 node instanceof Impl ||
+                node instanceof Equal ||
                 node instanceof Greater ||
                 node instanceof Less ||
                 node instanceof GreaterOrEqual ||
