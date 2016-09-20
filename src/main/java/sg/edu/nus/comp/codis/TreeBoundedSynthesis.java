@@ -103,9 +103,9 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
         List<Node> synthesisClauses = new ArrayList<>();
         for (TestCase test : testSuite) {
             for (Node node : result.get().clauses) {
-                if (test instanceof CODIS.SynthesisContext) {
+                if (test instanceof CODISSynthesisContext) {
                     //this is a bad hack, because I want to pretend that conflicts are computed in the outer context
-                    synthesisClauses.add(node.instantiate(((CODIS.SynthesisContext) test).getOuterTest()));
+                    synthesisClauses.add(node.instantiate(((CODISSynthesisContext) test).getOuterTest()));
                 } else {
                     synthesisClauses.add(node.instantiate(test));
                 }
@@ -177,9 +177,9 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
         List<Node> clauses = new ArrayList<>();
         List<Node> testClauses = testCase.getConstraints(output);
         for (Node clause : testClauses) {
-            if (testCase instanceof CODIS.SynthesisContext) {
+            if (testCase instanceof CODISSynthesisContext) {
                 //this is a bad hack, because I want to pretend that conflicts are computed in the outer context
-                clauses.add(clause.instantiate(((CODIS.SynthesisContext) testCase).getOuterTest()));
+                clauses.add(clause.instantiate(((CODISSynthesisContext) testCase).getOuterTest()));
             } else {
                 clauses.add(clause.instantiate(testCase));
             }

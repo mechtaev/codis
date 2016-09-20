@@ -24,8 +24,8 @@ public class DivergentTest {
     }
 
     public Optional<Triple<TestCase, Node, Node>> generate(Multiset<Node> components,
-                                                           List<TestCase> testSuite,
-                                                           List<ProgramVariable> inputVariables) {
+                                                                     List<? extends TestCase> testSuite,
+                                                                     List<ProgramVariable> inputVariables) {
         assert !testSuite.isEmpty();
 
         ComponentBasedSynthesis cbs = new ComponentBasedSynthesis(solver, false, Optional.empty()); //FIXME: integer encoding is not efficient, why we use it?
@@ -40,7 +40,7 @@ public class DivergentTest {
         List<Component> flattenedComponents1 = components.stream().map(Component::new).collect(Collectors.toList());
         Component result1 = new Component(new Hole("result", outputType, Node.class));
         Parameter output1 = new Parameter("<generatedOutput1>", outputType);
-        TestCase newTest1 = TestCase.ofAssignment(parametricAssignment, output1);
+        AssignmentTestCase newTest1 = new AssignmentTestCase(parametricAssignment, output1);
         List<TestCase> testSuite1 = new ArrayList<>(testSuite);
         testSuite1.add(newTest1);
         List<Node> clauses1 = cbs.encode(testSuite1, flattenedComponents1, result1);
@@ -48,7 +48,7 @@ public class DivergentTest {
         List<Component> flattenedComponents2 = components.stream().map(Component::new).collect(Collectors.toList());
         Component result2 = new Component(new Hole("result", outputType, Node.class));
         Parameter output2 = new Parameter("<generatedOutput2>", outputType);
-        TestCase newTest2 = TestCase.ofAssignment(parametricAssignment, output2);
+        AssignmentTestCase newTest2 = new AssignmentTestCase(parametricAssignment, output2);
         List<TestCase> testSuite2 = new ArrayList<>(testSuite);
         testSuite2.add(newTest2);
         List<Node> clauses2 = cbs.encode(testSuite2, flattenedComponents2, result2);
@@ -76,7 +76,7 @@ public class DivergentTest {
             newAssignment.put(variable, parameterValuation.get(parametricAssignment.get(variable)));
         }
 
-        TestCase newTest = TestCase.ofAssignment(newAssignment, parameterValuation.get(output1));
+        AssignmentTestCase newTest = new AssignmentTestCase(newAssignment, parameterValuation.get(output1));
         return Optional.of(new ImmutableTriple<>(newTest,
                 p1.getLeft().getSemantics(p1.getRight()),
                 p2.getLeft().getSemantics(p2.getRight())));

@@ -9,10 +9,10 @@ public class CODISBuilder {
 
     private CODIS instance;
 
-    public CODISBuilder(Solver solver, InterpolatingSolver iSolver, int incrementBound) {
+    public CODISBuilder(Solver solver, InterpolatingSolver iSolver, Tester tester, int incrementBound) {
         this.instance = new CODIS();
         this.instance.solver = solver;
-        this.instance.tester = new SolverTester(solver);
+        this.instance.tester = tester;
         this.instance.iSolver = iSolver;
         this.instance.incrementBound = incrementBound;
     }

@@ -2,6 +2,7 @@ package sg.edu.nus.comp.codis.ast;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import sg.edu.nus.comp.codis.TestCase;
 
 /**
  * Created by Sergey Mechtaev on 7/4/2016.

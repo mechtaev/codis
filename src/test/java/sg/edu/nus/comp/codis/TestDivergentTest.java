@@ -43,12 +43,12 @@ public class TestDivergentTest {
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(x, IntConst.of(1));
         assignment1.put(y, IntConst.of(2));
-        testSuite.add(TestCase.ofAssignment(assignment1, BoolConst.FALSE));
+        testSuite.add(new AssignmentTestCase(assignment1, BoolConst.FALSE));
 
         Map<ProgramVariable, Node> assignment2 = new HashMap<>();
         assignment2.put(x, IntConst.of(2));
         assignment2.put(y, IntConst.of(1));
-        testSuite.add(TestCase.ofAssignment(assignment2, BoolConst.TRUE));
+        testSuite.add(new AssignmentTestCase(assignment2, BoolConst.TRUE));
 
         Optional<Triple<TestCase, Node, Node>> result = generator.generate(components, testSuite, Arrays.asList(x, y));
 

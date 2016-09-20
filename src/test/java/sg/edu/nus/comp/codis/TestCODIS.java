@@ -25,7 +25,9 @@ public class TestCODIS {
 
     @BeforeClass
     public static void initSolver() {
-        synthesizer = new CODISBuilder(MathSAT.buildSolver(), MathSAT.buildInterpolatingSolver(), 2).build();
+        Solver solver = MathSAT.buildSolver();
+        InterpolatingSolver iSolver = MathSAT.buildInterpolatingSolver();
+        synthesizer = new CODISBuilder(solver, iSolver, new SolverTester(solver), 2).build();
     }
 
     private final ProgramVariable x = ProgramVariable.mkInt("x");
@@ -42,12 +44,12 @@ public class TestCODIS {
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(x, IntConst.of(0));
         assignment1.put(y, IntConst.of(1));
-        testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(1)));
+        testSuite.add(new AssignmentTestCase(assignment1, IntConst.of(1)));
 
         Map<ProgramVariable, Node> assignment2 = new HashMap<>();
         assignment2.put(x, IntConst.of(1));
         assignment2.put(y, IntConst.of(2));
-        testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(3)));
+        testSuite.add(new AssignmentTestCase(assignment2, IntConst.of(3)));
 
         Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizer.synthesize(testSuite, components);
         assertTrue(result.isPresent());

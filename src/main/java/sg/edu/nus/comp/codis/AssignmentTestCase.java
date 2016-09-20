@@ -1,7 +1,8 @@
-package sg.edu.nus.comp.codis.ast;
+package sg.edu.nus.comp.codis;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.Equal;
 
 import java.util.ArrayList;
@@ -9,41 +10,44 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by Sergey Mechtaev on 7/4/2016.
  *
- * Represent constraints over inputs and output. Defines physical equality.
  */
-public abstract class TestCase {
+public class AssignmentTestCase implements TestCase {
 
-    public abstract List<Node> getConstraints(Variable output);
+    private Map<ProgramVariable, ? extends Node> assignment;
+    private Node outputValue;
 
-    public abstract Type getOutputType();
-
-    protected TestCase() {
+    public AssignmentTestCase(Map<ProgramVariable, ? extends Node> assignment, Node outputValue) {
         objectCounter = classCounter;
         classCounter++;
+
+        this.assignment = assignment;
+        this.outputValue = outputValue;
     }
 
-    public static TestCase ofAssignment(Map<ProgramVariable, ? extends Node> assignment, Node outputValue) {
+    @Override
+    public List<Node> getConstraints(Variable output) {
         ArrayList<Node> inputClauses = new ArrayList<>();
         for (Map.Entry<ProgramVariable, ? extends Node> entry : assignment.entrySet()) {
             inputClauses.add(new Equal(entry.getKey(), entry.getValue()));
         }
-        return new TestCase() {
-            @Override
-            public List<Node> getConstraints(Variable output) {
-                ArrayList<Node> clauses = new ArrayList<>();
-                clauses.addAll(inputClauses);
-                clauses.add(new Equal(output, outputValue));
-                return clauses;
-            }
+        ArrayList<Node> clauses = new ArrayList<>();
+        clauses.addAll(inputClauses);
+        clauses.add(new Equal(output, outputValue));
+        return clauses;
+    }
 
-            @Override
-            public Type getOutputType() {
-                return TypeInference.typeOf(outputValue);
-            }
-        };
+    @Override
+    public Type getOutputType() {
+        return TypeInference.typeOf(outputValue);
+    }
 
+    public Map<ProgramVariable, ? extends Node> getAssignment() {
+        return assignment;
+    }
+
+    public Node getOutputValue() {
+        return outputValue;
     }
 
     private String id = null;
@@ -57,12 +61,12 @@ public abstract class TestCase {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof TestCase))
+        if (!(obj instanceof AssignmentTestCase))
             return false;
         if (obj == this)
             return true;
 
-        TestCase rhs = (TestCase) obj;
+        AssignmentTestCase rhs = (AssignmentTestCase) obj;
         return new EqualsBuilder().
                 append(objectCounter, rhs.objectCounter).
                 isEquals();

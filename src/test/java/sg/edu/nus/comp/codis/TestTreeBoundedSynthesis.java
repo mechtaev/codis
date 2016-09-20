@@ -43,12 +43,12 @@ public class TestTreeBoundedSynthesis {
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(x, IntConst.of(1));
         assignment1.put(y, IntConst.of(1));
-        testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(2)));
+        testSuite.add(new AssignmentTestCase(assignment1, IntConst.of(2)));
 
         Map<ProgramVariable, Node> assignment2 = new HashMap<>();
         assignment2.put(x, IntConst.of(1));
         assignment2.put(y, IntConst.of(2));
-        testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(3)));
+        testSuite.add(new AssignmentTestCase(assignment2, IntConst.of(3)));
 
         Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizer.synthesize(testSuite, components);
         assertTrue(result.isPresent());
@@ -68,12 +68,12 @@ public class TestTreeBoundedSynthesis {
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(x, IntConst.of(1));
         assignment1.put(y, IntConst.of(1));
-        testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(2)));
+        testSuite.add(new AssignmentTestCase(assignment1, IntConst.of(2)));
 
         Map<ProgramVariable, Node> assignment2 = new HashMap<>();
         assignment2.put(x, IntConst.of(1));
         assignment2.put(y, IntConst.of(2));
-        testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(3)));
+        testSuite.add(new AssignmentTestCase(assignment2, IntConst.of(3)));
 
         List<Program> forbidden = new ArrayList<>();
         Map<Hole, Program> args = new HashMap<>();
@@ -100,12 +100,12 @@ public class TestTreeBoundedSynthesis {
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(x, IntConst.of(1));
         assignment1.put(y, IntConst.of(1));
-        testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(2)));
+        testSuite.add(new AssignmentTestCase(assignment1, IntConst.of(2)));
 
         Map<ProgramVariable, Node> assignment2 = new HashMap<>();
         assignment2.put(x, IntConst.of(1));
         assignment2.put(y, IntConst.of(2));
-        testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(3)));
+        testSuite.add(new AssignmentTestCase(assignment2, IntConst.of(3)));
 
         List<Program> forbidden = new ArrayList<>();
         Map<Hole, Program> args = new HashMap<>();
@@ -135,7 +135,7 @@ public class TestTreeBoundedSynthesis {
         ArrayList<TestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(x, IntConst.of(10));
-        testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(2)));
+        testSuite.add(new AssignmentTestCase(assignment1, IntConst.of(2)));
 
         List<Program> forbidden = new ArrayList<>();
         forbidden.add(Program.leaf(new Component(p)));
@@ -157,7 +157,7 @@ public class TestTreeBoundedSynthesis {
         ArrayList<TestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(x, IntConst.of(2));
-        testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(2)));
+        testSuite.add(new AssignmentTestCase(assignment1, IntConst.of(2)));
 
         List<Program> forbidden = new ArrayList<>();
         forbidden.add(Program.leaf(new Component(x)));
@@ -185,18 +185,18 @@ public class TestTreeBoundedSynthesis {
         components.add(Components.ITE);
         components.add(Components.GT);
 
-        ArrayList<TestCase> testSuite = new ArrayList<>();
+        ArrayList<AssignmentTestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(x, IntConst.of(5));
         assignment1.put(y, IntConst.of(7));
-        TestCase testCase1 = TestCase.ofAssignment(assignment1, IntConst.of(0));
+        AssignmentTestCase testCase1 = new AssignmentTestCase(assignment1, IntConst.of(0));
         testCase1.setId("t1");
         testSuite.add(testCase1);
 
         Map<ProgramVariable, Node> assignment2 = new HashMap<>();
         assignment2.put(x, IntConst.of(2));
         assignment2.put(y, IntConst.of(1));
-        TestCase testCase2 = TestCase.ofAssignment(assignment2, IntConst.of(1));
+        AssignmentTestCase testCase2 = new AssignmentTestCase(assignment2, IntConst.of(1));
         testCase2.setId("t2");
         testSuite.add(testCase2);
 
@@ -237,7 +237,7 @@ public class TestTreeBoundedSynthesis {
 
         ArrayList<TestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
-        TestCase testCase1 = TestCase.ofAssignment(assignment1, IntConst.of(0));
+        AssignmentTestCase testCase1 = new AssignmentTestCase(assignment1, IntConst.of(0));
         testCase1.setId("t1");
         testSuite.add(testCase1);
 
@@ -257,7 +257,7 @@ public class TestTreeBoundedSynthesis {
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(x, IntConst.of(1));
         assignment1.put(y, IntConst.of(1));
-        testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(2)));
+        testSuite.add(new AssignmentTestCase(assignment1, IntConst.of(2)));
 
         Optional<Pair<Program, Map<Parameter, Constant>>> result = synthesizerUnique.synthesize(testSuite, components);
         assertFalse(result.isPresent());
@@ -274,7 +274,7 @@ public class TestTreeBoundedSynthesis {
         ArrayList<TestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(x, IntConst.of(1));
-        testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(2)));
+        testSuite.add(new AssignmentTestCase(assignment1, IntConst.of(2)));
 
         Map<Hole, Program> args = new HashMap<>();
         args.put((Hole)Components.ADD.getLeft(), Program.leaf(new Component(x)));
@@ -300,12 +300,12 @@ public class TestTreeBoundedSynthesis {
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
         assignment1.put(x, IntConst.of(1));
         assignment1.put(y, IntConst.of(1));
-        testSuite.add(TestCase.ofAssignment(assignment1, IntConst.of(2)));
+        testSuite.add(new AssignmentTestCase(assignment1, IntConst.of(2)));
 
         Map<ProgramVariable, Node> assignment2 = new HashMap<>();
         assignment2.put(x, IntConst.of(1));
         assignment2.put(y, IntConst.of(2));
-        testSuite.add(TestCase.ofAssignment(assignment2, IntConst.of(3)));
+        testSuite.add(new AssignmentTestCase(assignment2, IntConst.of(3)));
 
         List<Program> forbidden = new ArrayList<>();
         Map<Hole, Program> args = new HashMap<>();

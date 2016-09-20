@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.BoolConst;
-import sg.edu.nus.comp.codis.ast.theory.Equal;
 import sg.edu.nus.comp.codis.ast.theory.Not;
 
 import java.util.*;
@@ -22,7 +21,7 @@ public class CODIS extends SynthesisWithLearning {
 
     private Logger logger = LoggerFactory.getLogger(CODIS.class);
 
-    protected SolverTester tester;
+    protected Tester tester;
     protected InterpolatingSolver iSolver;
     protected Solver solver;
 
@@ -135,56 +134,6 @@ public class CODIS extends SynthesisWithLearning {
         //logger.info("Explored: " + n.explored);
     }
 
-    protected class SynthesisContext extends TestCase {
-
-        private TestCase outerTest;
-        private Pair<Program, Map<Parameter, Constant>> context;
-        private Variable globalOutput;
-        private Component leaf;
-
-        SynthesisContext(TestCase outerTest, Pair<Program, Map<Parameter, Constant>> context, Component leaf) {
-            super();
-            this.outerTest = outerTest;
-            this.context = context;
-            this.leaf = leaf;
-            this.globalOutput = new ProgramOutput(outerTest.getOutputType());
-        }
-
-        public TestCase getOuterTest() {
-            return outerTest;
-        }
-
-        @Override
-        public List<Node> getConstraints(Variable output) {
-            List<Node> constraints = new ArrayList<>();
-
-            constraints.addAll(outerTest.getConstraints(globalOutput));
-
-            Map<Component, Program> mapping = new HashMap<>();
-            mapping.put(leaf, Program.leaf(new Component(output)));
-            Program substituted = context.getLeft().substitute(mapping);
-            Node contextClause = new Equal(globalOutput, substituted.getSemantics(context.getRight()));
-            constraints.add(contextClause);
-
-            //NOTE: I need to relax constraints for parameters that are not used or only used in the leaf
-            for (Map.Entry<Parameter, Constant> parameterConstantEntry : context.getRight().entrySet()) {
-                Parameter p = parameterConstantEntry.getKey();
-                Constant v = parameterConstantEntry.getValue();
-                if (!substituted.getSemantics().contains(p)) {
-                    continue;
-                }
-                constraints.add(new Equal(p, v));
-            }
-
-            return constraints;
-        }
-
-        @Override
-        public Type getOutputType() {
-            return TypeInference.typeOf(leaf);
-        }
-    }
-
     private List<TestCase> getFailing(Pair<Program, Map<Parameter, Constant>> p, List<? extends TestCase> t) {
         List<TestCase> failing = new ArrayList<>();
         for (TestCase testCase : t) {
@@ -209,7 +158,6 @@ public class CODIS extends SynthesisWithLearning {
             return depth + 1;
         }
     }
-
 
     /**
      * TODO:
@@ -303,9 +251,9 @@ public class CODIS extends SynthesisWithLearning {
             List<TestCase> newFixed = new ArrayList<>(current.fixed);
             newFixed.add(current.test);
 
-            List<SynthesisContext> contextTestSuite = new ArrayList<>();
+            List<CODISSynthesisContext> contextTestSuite = new ArrayList<>();
             for (TestCase testCase : newFixed) {
-                contextTestSuite.add(new SynthesisContext(testCase, current.program, current.leaf));
+                contextTestSuite.add(new CODISSynthesisContext(testCase, current.program, current.leaf));
             }
 
             Multiset<Node> remainingWithRemovedLeaf = HashMultiset.create();
@@ -459,7 +407,7 @@ public class CODIS extends SynthesisWithLearning {
         }
     }
 
-    private boolean isSubsumedAtLeaf(Component leaf, List<SynthesisContext> context, List<Node> conflicts) {
+    private boolean isSubsumedAtLeaf(Component leaf, List<CODISSynthesisContext> context, List<Node> conflicts) {
         if (conflicts.size() > maximumConflictsCheck) {
             logger.debug("found " + conflicts.size() + " conflicts, but only " + maximumConflictsCheck + " used");
             conflicts = conflicts.subList(0, maximumConflictsCheck);
@@ -469,7 +417,7 @@ public class CODIS extends SynthesisWithLearning {
 
         Type leafType = TypeInference.typeOf(leaf);
 
-        for (SynthesisContext testCase : context) {
+        for (CODISSynthesisContext testCase : context) {
             ProgramOutput output = conflictVariables.get(leafType);
             List<Node> testClauses = testCase.getConstraints(output);
             for (Node testClause : testClauses) {
@@ -499,12 +447,12 @@ public class CODIS extends SynthesisWithLearning {
         return !intersected;
     }
 
-    private boolean substitutionExists(Component leaf, List<SynthesisContext> context) {
+    private boolean substitutionExists(Component leaf, List<CODISSynthesisContext> context) {
         List<Node> clauses = new ArrayList<>();
 
         Type leafType = TypeInference.typeOf(leaf);
 
-        for (SynthesisContext testCase : context) {
+        for (CODISSynthesisContext testCase : context) {
             ProgramOutput output = conflictVariables.get(leafType);
             List<Node> testClauses = testCase.getConstraints(output);
             for (Node testClause : testClauses) {

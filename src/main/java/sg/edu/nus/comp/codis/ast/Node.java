@@ -1,5 +1,6 @@
 package sg.edu.nus.comp.codis.ast;
 
+import sg.edu.nus.comp.codis.TestCase;
 import sg.edu.nus.comp.codis.ast.theory.And;
 import sg.edu.nus.comp.codis.ast.theory.BoolConst;
 import sg.edu.nus.comp.codis.ast.theory.Or;
