@@ -292,7 +292,7 @@ public class CODIS extends SynthesisWithLearning {
 
             SearchTreeNode current = synthesisSequence.pop();
 
-            if (config.maximumLeafExpansions.isPresent() &&
+            if (!synthesisSequence.isEmpty() && config.maximumLeafExpansions.isPresent() &&
                     config.maximumLeafExpansions.get() < current.explored.size()) {
                 logger.debug("reached maximum number of leaf expansions");
                 continue;
