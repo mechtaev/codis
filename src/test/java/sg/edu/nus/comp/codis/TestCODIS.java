@@ -25,8 +25,7 @@ public class TestCODIS {
 
     @BeforeClass
     public static void initSolver() {
-        CODISConfig config = new CODISConfig(2);
-        synthesizer = new CODIS(MathSAT.buildSolver(), MathSAT.buildInterpolatingSolver(), config);
+        synthesizer = new CODISBuilder(MathSAT.buildSolver(), MathSAT.buildInterpolatingSolver(), 2).build();
     }
 
     private final ProgramVariable x = ProgramVariable.mkInt("x");

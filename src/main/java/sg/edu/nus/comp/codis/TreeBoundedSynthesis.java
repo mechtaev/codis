@@ -18,7 +18,17 @@ import java.util.stream.Collectors;
  */
 public class TreeBoundedSynthesis extends SynthesisWithLearning {
 
-    private TBSConfig config;
+    protected int bound;
+
+    // default options:
+    protected boolean uniqueUsage = true;
+    protected boolean conciseInterpolants = false;
+    protected boolean invertedLearning = false;
+    protected boolean matchLeaves = true;
+    protected List<Program> forbidden = new ArrayList<>(); // NOTE: now forbidden isSatisfiable prefixes if they are larger than size
+    protected Map<Type, ProgramOutput> outputs = new HashMap<>();
+
+    public InterpolatingSolver solver;
 
     private Logger logger = LoggerFactory.getLogger(TreeBoundedSynthesis.class);
 
@@ -67,13 +77,7 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
         }
     }
 
-    private InterpolatingSolver solver;
-
-    // NOTE: now forbidden isSatisfiable prefixes if they are larger than size
-    public TreeBoundedSynthesis(InterpolatingSolver solver, TBSConfig config) {
-        this.solver = solver;
-        this.config = config;
-    }
+    protected TreeBoundedSynthesis() {};
 
     @Override
     public Either<Pair<Program, Map<Parameter, Constant>>, Node> synthesizeOrLearn(List<? extends TestCase> testSuite,
@@ -81,16 +85,16 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
         //List<Component> flattenedComponents = components.stream().map(Component::new).collect(Collectors.toList());
         List<Node> uniqueComponents = new ArrayList<>(components.elementSet());
         ProgramOutput root;
-        if (config.outputs.containsKey(testSuite.get(0).getOutputType())) {
-            root = config.outputs.get(testSuite.get(0).getOutputType());
+        if (outputs.containsKey(testSuite.get(0).getOutputType())) {
+            root = outputs.get(testSuite.get(0).getOutputType());
         } else {
             root = new ProgramOutput(testSuite.get(0).getOutputType());
         }
         // top level -> current level
         Map<Program, Program> initialForbidden =
-                config.forbidden.stream().collect(Collectors.toMap(Function.identity(), Function.identity()));
+                forbidden.stream().collect(Collectors.toMap(Function.identity(), Function.identity()));
 
-        Optional<EncodingResult> result = encodeBranch(root, config.bound, uniqueComponents, initialForbidden);
+        Optional<EncodingResult> result = encodeBranch(root, bound, uniqueComponents, initialForbidden);
 
         if (!result.isPresent()) {
             throw new IllegalArgumentException("wrong synthesis input");
@@ -127,7 +131,7 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
                                 Node.conjunction(l.stream().map(Not::new).collect(Collectors.toList()))).collect(Collectors.toList())));
             }
         }
-        if (config.uniqueUsage) {
+        if (uniqueUsage) {
             for (Node component : uniqueComponents) {
                 if (result.get().componentUsage.containsKey(component)) {
                     synthesisClauses.addAll(Cardinality.SortingNetwork.atMostK(components.count(component),
@@ -137,8 +141,8 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
         }
 
         Either<Map<Variable, Constant>, Node> solverResult;
-        if (!config.conciseInterpolants) {
-            if (config.invertedLearning) {
+        if (!conciseInterpolants) {
+            if (invertedLearning) {
                 solverResult = solver.getModelOrInterpolant(synthesisClauses, contextClauses);
             } else {
                 solverResult = solver.getModelOrInterpolant(contextClauses, synthesisClauses);
@@ -155,7 +159,7 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
                 renamedSynthesisClauses.add(
                         contextClause.index(0, c -> c instanceof TestInstance && ((TestInstance)c).getVariable().equals(root)));
             }
-            if (config.invertedLearning) {
+            if (invertedLearning) {
                 solverResult = solver.getModelOrInterpolant(renamedSynthesisClauses, renamedContextClauses);
             } else {
                 solverResult = solver.getModelOrInterpolant(renamedContextClauses, renamedSynthesisClauses);
@@ -260,11 +264,11 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
                     for (Program local : localForbidden) {
                         if (local.getRoot().getSemantics().equals(component)) {
                             //FIXME: this option currently forbid prefixes, which is not desirable
-                            if (config.matchLeaves ||
+                            if (matchLeaves ||
                                     local.getChildren().values().stream().filter(p -> !p.isLeaf()).count() > 0) {
                                 for (Program global : forbidden.keySet()) {
                                     if (forbidden.get(global).equals(local)) {
-                                        if (config.matchLeaves || !local.getChildren().get(input).isLeaf()) {
+                                        if (matchLeaves || !local.getChildren().get(input).isLeaf()) {
                                             // NOTE: can be repetitions, but it is OK
                                             subnodeForbidden.get(child).put(global, local.getChildren().get(input));
                                         }

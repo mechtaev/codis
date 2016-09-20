@@ -15,13 +15,13 @@ public class CEGIS implements Synthesis {
 
     private Synthesis synthesizer;
 
-    private Tester tester;
+    private SolverTester tester;
 
     private Logger logger = LoggerFactory.getLogger(CEGIS.class);
 
     public CEGIS(Synthesis synthesizer, Solver solver) {
         this.synthesizer = synthesizer;
-        this.tester = new Tester(solver);
+        this.tester = new SolverTester(solver);
     }
 
     @Override

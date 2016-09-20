@@ -1,26 +1,15 @@
 package sg.edu.nus.comp.codis;
 
-import sg.edu.nus.comp.codis.ast.*;
-import sg.edu.nus.comp.codis.ast.theory.Equal;
+import sg.edu.nus.comp.codis.ast.Constant;
+import sg.edu.nus.comp.codis.ast.Parameter;
+import sg.edu.nus.comp.codis.ast.Program;
+import sg.edu.nus.comp.codis.ast.TestCase;
 
-import java.util.List;
 import java.util.Map;
 
 /**
- * Created by Sergey Mechtaev on 2/5/2016.
+ * Created by Sergey Mechtaev on 20/9/2016.
  */
-public class Tester {
-
-    private Solver solver;
-
-    public Tester(Solver solver) {
-        this.solver = solver;
-    }
-
-    public boolean isPassing(Program program, Map<Parameter, Constant> parameterValuation, TestCase test) {
-        Variable result = new ProgramOutput(test.getOutputType());
-        List<Node> clauses = test.getConstraints(result);
-        clauses.add(new Equal(program.getSemantics(parameterValuation), result));
-        return solver.isSatisfiable(clauses);
-    }
+interface Tester {
+    boolean isPassing(Program program, Map<Parameter, Constant> parameterValuation, TestCase test);
 }
