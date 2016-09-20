@@ -203,16 +203,16 @@ public class CODIS extends SynthesisWithLearning {
 
         Set<String> history = new HashSet<>();
 
-        //FIXME: instead of synthesizing, I can just choose an arbitrary leaf component
-        TreeBoundedSynthesis initialSynthesizer = new TBSBuilder(iSolver, 1).build();
-        List<TestCase> initialTestSuite = new ArrayList<>();
-        initialTestSuite.add(testSuite.get(0));
-        Pair<Program, Map<Parameter, Constant>> initial = initialSynthesizer.synthesize(initialTestSuite, components).get();
+        //starting with arbitrary leaf program
+        Node arbitraryLeaf = components.stream().filter(c -> Traverse.collectByType(c, Hole.class).isEmpty() &&
+                Traverse.collectByType(c, Parameter.class).isEmpty()).findFirst().get();
+        Pair<Program, Map<Parameter, Constant>> initial =
+                new ImmutablePair<>(Program.leaf(new Component(arbitraryLeaf)), new HashMap<>());
 
         List<TestCase> fixed = new ArrayList<>();
-        fixed.add(testSuite.get(0));
-
         List<TestCase> failing = getFailing(initial, testSuite);
+
+        logger.info("Initial program: " + initial.getLeft().getSemantics());
 
         if (failing.isEmpty()) {
             found.add(initial);
@@ -242,8 +242,8 @@ public class CODIS extends SynthesisWithLearning {
 
             SearchTreeNode current = synthesisSequence.pop();
 
-            if (!synthesisSequence.isEmpty() && this.maximumLeafExpansions.isPresent() &&
-                    this.maximumLeafExpansions.get() < current.explored.size()) {
+            if (!synthesisSequence.isEmpty() && maximumLeafExpansions.isPresent() &&
+                    maximumLeafExpansions.get() < current.explored.size()) {
                 logger.debug("reached maximum number of leaf expansions");
                 continue;
             }

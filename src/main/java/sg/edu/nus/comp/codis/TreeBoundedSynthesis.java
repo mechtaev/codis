@@ -82,6 +82,7 @@ public class TreeBoundedSynthesis extends SynthesisWithLearning {
     @Override
     public Either<Pair<Program, Map<Parameter, Constant>>, Node> synthesizeOrLearn(List<? extends TestCase> testSuite,
                                                                                    Multiset<Node> components) {
+        logger.info("synthesis with " + testSuite.size() + " tests and " + components.size() + " components");
         //List<Component> flattenedComponents = components.stream().map(Component::new).collect(Collectors.toList());
         List<Node> uniqueComponents = new ArrayList<>(components.elementSet());
         ProgramOutput root;
