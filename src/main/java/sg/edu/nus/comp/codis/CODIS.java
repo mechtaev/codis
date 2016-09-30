@@ -284,14 +284,14 @@ public class CODIS extends SynthesisWithLearning {
 
             tbsBuilder.setForbidden(current.explored);
 
-            TreeBoundedSynthesis synthesizer = tbsBuilder.build();
-
             Type leafType = TypeInference.typeOf(current.leaf);
             if (!conflictVariables.containsKey(leafType)) {
                 ProgramOutput output = new ProgramOutput(leafType);
                 conflictVariables.put(leafType, output);
                 tbsBuilder.setProgramOutput(leafType, output);
             }
+
+            TreeBoundedSynthesis synthesizer = tbsBuilder.build();
 
             boolean isSubsumed = false;
             boolean substitutionExists = true; //NOTE: true actually means don't know
