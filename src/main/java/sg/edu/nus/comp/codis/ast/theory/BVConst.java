@@ -4,42 +4,55 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import sg.edu.nus.comp.codis.ast.*;
 
+import java.math.BigInteger;
+
 /**
  * Created by Sergey Mechtaev on 30/4/2016.
  */
 public class BVConst extends Constant {
 
-    private long value;
+    private BigInteger value;
 
     private BVType type;
 
-    private BVConst(long value, int size) {
+    public BVConst(BigInteger value, int size) {
         this.value = value;
         this.type = new BVType(size);
     }
 
     public static BVConst ofLong(long value, int size) {
-        return new BVConst(value, size);
+        return new BVConst(BigInteger.valueOf(value), size);
     }
 
     public static BVConst ofBoolean(boolean value, int size) {
-        return new BVConst(value ? 1 : 0, size);
+        return new BVConst(BigInteger.valueOf(value ? 1 : 0), size);
+    }
+
+    /**
+     * From HEX
+     */
+    public static BVConst ofHEXString(String repr, int size) {
+        return new BVConst(new BigInteger(repr, 16), size);
     }
 
     public BVType getType() {
         return type;
     }
 
-    public long getLong() {
+    public BigInteger getValue() {
         return value;
     }
 
+    public long getLong() {
+        return value.longValue();
+    }
+
     public String getString() {
-        return Long.toString(value);
+        return value.toString();
     }
 
     public boolean getBoolean() {
-        return value != 0;
+        return !value.equals(BigInteger.ZERO);
     }
 
     public boolean equals(Object obj) {
@@ -85,7 +98,7 @@ public class BVConst extends Constant {
 
     @Override
     public String toString() {
-        return Long.toString(value);
+        return value.toString();
     }
 
 }

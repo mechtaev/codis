@@ -8,6 +8,7 @@ import sg.edu.nus.comp.codis.ast.*;
 import sg.edu.nus.comp.codis.ast.theory.*;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import java.math.BigInteger;
 import java.util.*;
 
 /**
@@ -180,7 +181,7 @@ public class MathSAT implements Solver, InterpolatingSolver {
                 int size = ((BVType) TypeInference.typeOf(variable)).getSize();
                 long result = mathsat.api.msat_model_eval(model, getBVVar(marshaller.toString(variable), size));
                 if (mathsat.api.msat_term_is_number(solver, result) != 0) {
-                    assingment.put(variable, BVConst.ofLong(convertMathSATNumeral(solver, result), size));
+                    assingment.put(variable, new BVConst(convertMathSATNumeral(solver, result), size));
                 } else {
                     throw new RuntimeException("unsupported MathSAT expression type");
                 }
@@ -191,13 +192,13 @@ public class MathSAT implements Solver, InterpolatingSolver {
         return assingment;
     }
 
-    private Long convertMathSATNumeral(long solver, long result) {
+    private BigInteger convertMathSATNumeral(long solver, long result) {
         String repr = mathsat.api.msat_term_to_number(solver, result);
         int index = repr.indexOf('_');
         if (index >= 0) {
             repr = repr.substring(0, index); //NOTE: this is a workaround for bv
         }
-        return Long.parseLong(repr);
+        return new BigInteger(repr);
     }
 
     @Override
@@ -399,7 +400,7 @@ public class MathSAT implements Solver, InterpolatingSolver {
             return r;
         } else if (mathsat.api.msat_term_is_number(solver, expr) != 0
                 && mathsat.api.msat_is_integer_type(solver, mathsat.api.msat_term_get_type(expr)) != 0) {
-            IntConst r = IntConst.of(Math.toIntExact(convertMathSATNumeral(solver, expr)));
+            IntConst r = IntConst.of(Math.toIntExact(convertMathSATNumeral(solver, expr).longValue()));
             mathsatToNodeMemo.put(expr, r);
             return r;
         } else if (mathsat.api.msat_term_is_constant(solver, expr) != 0) {
@@ -421,7 +422,7 @@ public class MathSAT implements Solver, InterpolatingSolver {
             return r;
         } else if (mathsat.api.msat_term_is_number(solver, expr) != 0
                 && mathsat.api.msat_is_bv_type(solver, mathsat.api.msat_term_get_type(expr), null) != 0) {
-            BVConst r = BVConst.ofLong(convertMathSATNumeral(solver, expr), sizeAux[0]);
+            BVConst r = new BVConst(convertMathSATNumeral(solver, expr), sizeAux[0]);
             mathsatToNodeMemo.put(expr, r);
             return r;
         } else if (mathsat.api.msat_term_is_bv_plus(solver, expr) != 0) {
@@ -776,12 +777,13 @@ public class MathSAT implements Solver, InterpolatingSolver {
 
         @Override
         public void visit(BVConst bvConst) {
-            long value = bvConst.getLong();
-            if (value < 0) {
+            BigInteger value = bvConst.getValue();
+            if (value.compareTo(BigInteger.ZERO) == -1) { // less than
+                // BigInteger in case of MIN_VALUE
                 pushAndMemoExpr(mathsat.api.msat_make_bv_neg(solver,
-                        mathsat.api.msat_make_bv_number(solver, Long.toString(-value), bvConst.getType().getSize(), 10)), bvConst);
+                        mathsat.api.msat_make_bv_number(solver, value.negate().toString(), bvConst.getType().getSize(), 10)), bvConst);
             } else {
-                pushAndMemoExpr(mathsat.api.msat_make_bv_number(solver, Long.toString(value), bvConst.getType().getSize(), 10), bvConst);
+                pushAndMemoExpr(mathsat.api.msat_make_bv_number(solver, value.toString(), bvConst.getType().getSize(), 10), bvConst);
             }
         }
 

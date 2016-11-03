@@ -33,39 +33,72 @@ public class Components {
     public static final Application ITE = new ITE(a, i, j);
 
 
-    private static final int BV_SIZE = 32;
+    private Components(int size) {
+        t = new Hole("t", new BVType(size), Node.class);
+        p = new Hole("p", new BVType(size), Node.class);
+        BVADD = new BVAdd(t, p);
+        BVSUB = new BVSub(t, p);
+        BVDIV = new BVSignedDiv(t, p);
+        BVUDIV = new BVUnsignedDiv(t, p);
+        BVSREM = new BVSignedRemainder(t, p);
+        BVUREM = new BVUnsignedRemainder(t, p);
+        BVSMOD = new BVSignedModulo(t, p);
+        BVMUL = new BVMult(t, p);
+        BVNEG = new BVNeg(t);
+        BVUGT = new BVUnsignedGreater(t, p);
+        BVUGE = new BVUnsignedGreaterOrEqual(t, p);
+        BVULT = new BVUnsignedLess(t, p);
+        BVULE = new BVUnsignedLessOrEqual(t, p);
+        BVSGT = new BVSignedGreater(t, p);
+        BVSGE = new BVSignedGreaterOrEqual(t, p);
+        BVSLT = new BVSignedLess(t, p);
+        BVSLE = new BVSignedLessOrEqual(t, p);
+        BVSHL = new BVShiftLeft(t, p);
+        BVLSHR = new BVUnsignedShiftRight(t, p);
+        BVASHR = new BVSignedShiftRight(t, p);
+        BVAND = new BVAnd(t, p);
+        BVOR = new BVOr(t, p);
+        BVXOR = new BVXor(t, p);
+        BVNOT = new BVNot(t);
+        BVITE = new ITE(a, t, p);
+    }
 
-    private static final Hole t = new Hole("t", new BVType(BV_SIZE), Node.class);
-    private static final Hole p = new Hole("p", new BVType(BV_SIZE), Node.class);
-    private static final Hole v = new Hole("v", new BVType(BV_SIZE), Node.class);
+    public static Components ofSize(int size) {
+        return new Components(size);
 
-    public static final BinaryOp BVADD = new BVAdd(t, p);
-    public static final BinaryOp BVSUB = new BVSub(t, p);
-    public static final BinaryOp BVDIV = new BVSignedDiv(t, p);
-    public static final BinaryOp BVUDIV = new BVUnsignedDiv(t, p);
-    public static final BinaryOp BVSREM = new BVSignedRemainder(t, p);
-    public static final BinaryOp BVUREM = new BVUnsignedRemainder(t, p);
-    public static final BinaryOp BVSMOD = new BVSignedModulo(t, p);
-    public static final BinaryOp BVMUL = new BVMult(t, p);
-    public static final UnaryOp BVNEG = new BVNeg(t);
+    }
 
-    public static final BinaryOp BVUGT = new BVUnsignedGreater(t, p);
-    public static final BinaryOp BVUGE = new BVUnsignedGreaterOrEqual(t, p);
-    public static final BinaryOp BVULT = new BVUnsignedLess(t, p);
-    public static final BinaryOp BVULE = new BVUnsignedLessOrEqual(t, p);
+    private final Hole t;
+    private final Hole p;
 
-    public static final BinaryOp BVSGT = new BVSignedGreater(t, p);
-    public static final BinaryOp BVSGE = new BVSignedGreaterOrEqual(t, p);
-    public static final BinaryOp BVSLT = new BVSignedLess(t, p);
-    public static final BinaryOp BVSLE = new BVSignedLessOrEqual(t, p);
+    public final BinaryOp BVADD;
+    public final BinaryOp BVSUB;
+    public final BinaryOp BVDIV;
+    public final BinaryOp BVUDIV;
+    public final BinaryOp BVSREM;
+    public final BinaryOp BVUREM;
+    public final BinaryOp BVSMOD;
+    public final BinaryOp BVMUL;
+    public final UnaryOp BVNEG;
 
-    public static final BinaryOp BVSHL = new BVShiftLeft(t, p);
-    public static final BinaryOp BVLSHR = new BVUnsignedShiftRight(t, p);
-    public static final BinaryOp BVASHR = new BVSignedShiftRight(t, p);
+    public final BinaryOp BVUGT;
+    public final BinaryOp BVUGE;
+    public final BinaryOp BVULT;
+    public final BinaryOp BVULE;
 
-    public static final BinaryOp BVAND = new BVAnd(t, p);
-    public static final BinaryOp BVOR = new BVOr(t, p);
-    public static final UnaryOp BVNOT = new BVNot(t);
+    public final BinaryOp BVSGT;
+    public final BinaryOp BVSGE;
+    public final BinaryOp BVSLT;
+    public final BinaryOp BVSLE;
 
-    public static final Application BVITE = new ITE(a, t, p);
+    public final BinaryOp BVSHL;
+    public final BinaryOp BVLSHR;
+    public final BinaryOp BVASHR;
+
+    public final BinaryOp BVAND;
+    public final BinaryOp BVOR;
+    public final BinaryOp BVXOR;
+    public final UnaryOp BVNOT;
+
+    public final Application BVITE;
 }

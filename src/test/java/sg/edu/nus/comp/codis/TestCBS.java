@@ -192,8 +192,8 @@ public class TestCBS {
         Multiset<Node> components = HashMultiset.create();
         components.add(bvX);
         components.add(bvY);
-        components.add(Components.BVUGT);
-        components.add(Components.BVUGE);
+        components.add(Components.ofSize(32).BVUGT);
+        components.add(Components.ofSize(32).BVUGE);
 
         ArrayList<AssignmentTestCase> testSuite = new ArrayList<>();
         Map<ProgramVariable, Node> assignment1 = new HashMap<>();
