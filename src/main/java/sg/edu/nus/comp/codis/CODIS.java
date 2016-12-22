@@ -229,6 +229,9 @@ public class CODIS extends SynthesisWithLearning {
         int synthesisIteration = 0;
         int lastRestart = synthesisIteration;
 
+        int synthesisCount = 0;
+        int subsumptionCount = 0;
+
         while (!synthesisSequence.isEmpty()) {
             if (this.iterationsBeforeRestart.isPresent() &&
                     this.iterationsBeforeRestart.get() <= (synthesisIteration - lastRestart)) {
@@ -239,6 +242,9 @@ public class CODIS extends SynthesisWithLearning {
                 }
                 continue;
             }
+
+            //logger.info("synthesis calls: " + synthesisCount);
+            //logger.info("subsumed calls: " + subsumptionCount);
 
             SearchTreeNode current = synthesisSequence.pop();
 
@@ -305,6 +311,7 @@ public class CODIS extends SynthesisWithLearning {
                 List<Node> relevantConflicts = conflicts.query(remainingWithRemovedLeaf);
                 if (!relevantConflicts.isEmpty()) {
                     isSubsumed = isSubsumedAtLeaf(current.leaf, contextTestSuite, relevantConflicts);
+                    subsumptionCount++;
                 }
             }
 
@@ -319,6 +326,7 @@ public class CODIS extends SynthesisWithLearning {
 
             Either<Pair<Program, Map<Parameter, Constant>>, Node> result =
                     synthesizer.synthesizeOrLearn(contextTestSuite, remainingWithRemovedLeaf);
+            synthesisCount++;
 
             if (result.isRight()) {
                 Node conflict = result.right().value();

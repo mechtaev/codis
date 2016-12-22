@@ -18,6 +18,8 @@ public class Component {
 
     public Component(Node semantics) {
         this.semantics = semantics;
+        objectCounter = classCounter;
+        classCounter++;
     }
 
     public Node getSemantics() {
@@ -40,5 +42,29 @@ public class Component {
     public String toString() {
         return semantics.toString();
     }
+
+    private static int classCounter = 0;
+    private final int objectCounter;
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof Component))
+            return false;
+        if (obj == this)
+            return true;
+
+        Component rhs = (Component) obj;
+        return new EqualsBuilder().
+                append(objectCounter, rhs.objectCounter).
+                isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 31).
+                append(objectCounter).
+                toHashCode();
+    }
+
 
 }

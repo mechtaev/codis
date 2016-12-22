@@ -55,7 +55,7 @@ public class Hole extends Variable {
         return new HashCodeBuilder(17, 31).
                 append(name).
                 append(type).
-                append(superclass).
+                append(superclass.getName()). // name to make deterministic
                 toHashCode();
     }
 
